@@ -4,6 +4,20 @@ Build two PostgreSQL databases and generate a briefing for any of the 249 ISO 31
 
 Start with [the evidence brief](docs/Evidence.md) for cited examples from Honduras, Niger, the Philippines, Mozambique and Ethiopia. The [open-source comparison](Open-Source%20Adoptions.md) explains the selections. Each input has a pinned archive URL, publisher reference and SHA-256 digest in the [source manifest](data/sources.tsv).
 
+## Interactive country atlas
+
+Open `Trade-over-Aid-Atlas.html` in a modern browser. Select a country on the map or search by name or ISO code. The coverage layer shows where each provider appears in the sources. The sponsor-equity layer compares disclosed U.S. and Chinese stakes in the same World Bank infrastructure series for 1999–2023. A country needs at least one disclosed amount from each provider for a paired comparison. The country overview gives the number of stakes with a reported amount.
+
+The funding history keeps U.S. payments, U.S. obligations and the two Chinese commitment series separate. Choose **Annual values** for exact amounts and years. The **Funding**, **Results** and **Programs** tabs link each entry to its source and record locator. **Download country data** exports the selected country's records, outcomes, national trade context and source references as JSON. The HTML embeds the full snapshot, geography, scripts and fonts. Following a publisher link requires a connection.
+
+To rebuild the HTML after populating the databases below, install Node.js 18 or newer with npm and run:
+
+```bash
+scripts/build-atlas.sh
+```
+
+The output is `artifacts/Trade-over-Aid-Atlas.html`. The initial build downloads locked JavaScript packages and a checksum-verified Natural Earth release. Subsequent readers only need the HTML. The map and country profiles describe documented financial engagement. The underlying sources provide program-specific evidence about outcomes and do not establish diplomatic influence.
+
 ## Build and use
 
 Run these commands on Linux as an ordinary user with Bash, micromamba, curl, flock and sha256sum. They create a local Unix-socket PostgreSQL cluster and two regular databases. Run from the repository root.
@@ -69,3 +83,5 @@ pg_restore --exit-on-error --single-transaction --no-owner --no-privileges -d to
 `tests/restore.sh` restores both backups into temporary databases, reruns the integration suite, and removes its temporary copies. `Rscript tests/verify.R` checks the live release, including source reconciliation, missing amounts, joins, coverage, monetary precision, lower bounds, fiscal periods and evaluated results. Running the build again uses the same pinned inputs. To adopt a new source vintage, update the manifest, audit its definitions and country concordance, then review the release-specific tests.
 
 The prepared Codex cloud runtime uses `/workspace/.toa-tools/project/bin`. Add that directory to PATH and source `scripts/start-postgres.sh` in a fresh shell. The prepared databases reside in the checkout's ignored `.toa/pgdata`; backups are portable.
+
+For the atlas, run `python tests/atlas_data.py` after sourcing the PostgreSQL startup script. This checks the finished HTML against both databases, including money, missing amounts, outcomes, citations and country scope. Run `python tests/atlas_browser.py` with a Python environment containing Playwright and Chromium to exercise country selection, both map layers, funding and results, downloads and offline rendering. Set `CHROMIUM_PATH` to use a specific Chromium executable.

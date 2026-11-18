@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#102e37" />
+    <title>Country evidence atlas · Trade over Aid</title>
+    <style>
+      /* ATLAS_CSS */
+    </style>
+  </head>
+  <body>
+    <header class="mast">
+      <div class="mastinner">
+        <div class="brand">
+          <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="13" />
+            <ellipse cx="16" cy="16" rx="6" ry="13" />
+            <path d="M3 16h26M5.5 8.5q10.5 5 21 0M5.5 23.5q10.5-5 21 0" /></svg
+          >Trade over Aid
+        </div>
+        <button class="navlink" id="sourcesBtn">
+          <span aria-hidden="true">▤</span> Sources
+        </button>
+      </div>
+    </header>
+    <main>
+      <div class="heading">
+        <div>
+          <h1>Country evidence atlas</h1>
+          <p>
+            Explore U.S. and Chinese development finance and reported outcomes.
+          </p>
+        </div>
+        <div class="lookup">
+          <label for="search">Find a country or territory</label>
+          <div class="searchbox">
+            <span data-icon="search"></span
+            ><input
+              id="search"
+              type="search"
+              autocomplete="off"
+              role="combobox"
+              aria-expanded="false"
+              aria-controls="matches"
+              aria-autocomplete="list"
+              placeholder="Search by name or code"
+            /><kbd>/</kbd>
+          </div>
+          <div id="matches" role="listbox" hidden></div>
+        </div>
+      </div>
+      <div class="atlasrow">
+        <section class="mapcard" aria-label="Interactive country map">
+          <div class="maphead">
+            <h2>World map</h2>
+            <select id="mapMode" aria-label="Map measure">
+              <option value="coverage">Program coverage</option>
+              <option value="equity">Sponsor equity</option>
+            </select>
+            <div class="zoom">
+              <button id="zoomIn" aria-label="Zoom in">+</button
+              ><button id="zoomOut" aria-label="Zoom out">−</button
+              ><button id="resetMap" aria-label="Reset map view">
+                <span data-icon="reset"></span>
+              </button>
+            </div>
+          </div>
+          <div class="mapstage">
+            <svg
+              id="map"
+              viewBox="0 0 1000 485"
+              role="group"
+              aria-label="Select a country on the world map"
+            ></svg>
+            <div id="maptip" role="tooltip" hidden></div>
+          </div>
+          <div class="legend" id="legend"></div>
+        </section>
+        <section class="profile" aria-labelledby="countryName">
+          <div class="countryloc">
+            <span data-icon="pin"></span><span id="location"></span>
+          </div>
+          <h2 id="countryName"></h2>
+          <div id="profileStats"></div>
+          <button class="download" id="download">
+            <span data-icon="download"></span> Download country data
+          </button>
+        </section>
+      </div>
+      <div class="detailnav">
+        <nav id="tabs" aria-label="Country evidence sections"></nav>
+      </div>
+      <div id="evidence"></div>
+      <footer>
+        <span>Trade over Aid · Country evidence atlas</span
+        ><button id="methodsBtn">
+          Sources and coverage <span aria-hidden="true">↗</span>
+        </button>
+      </footer>
+    </main>
+    <dialog id="drawer">
+      <div class="drawerHead">
+        <div><h2 id="drawerTitle">Sources</h2></div>
+        <button id="closeDrawer" aria-label="Close details">×</button>
+      </div>
+      <div id="drawerBody"></div>
+    </dialog>
+    <p id="announce" class="sr-only" role="status"></p>
+    <noscript
+      >Enable JavaScript to select countries and inspect records.</noscript
+    >
+    <script id="snapshot" type="application/json">
+      ATLAS_SNAPSHOT
+    </script>
+    <template id="licenses"><pre>ATLAS_LICENSES</pre></template>
+    <script>
+      /* ATLAS_JS */
+    </script>
+  </body>
+</html>

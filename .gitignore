@@ -3,3 +3,4 @@ artifacts/
 .toa/
 .Rhistory
 .Rproj.user/
+atlas/node_modules/
