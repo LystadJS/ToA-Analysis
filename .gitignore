@@ -1,0 +1,5 @@
+data/cache/
+artifacts/
+.toa/
+.Rhistory
+.Rproj.user/

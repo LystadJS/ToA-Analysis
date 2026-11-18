@@ -1,0 +1,6 @@
+id	program_id	indicator	level	unit	baseline	baseline_year	actual	target	observed_year	method	interpretation	comparator
+hnd-time	ftf-hnd	Reduction in processing time at Puerto Cortés	Outcome	percent reduction			50			Program report	Report p. 20. Paperless handling and joint inspections. Baseline hours, observation dates and comparison port undisclosed.	=
+hnd-cost	ftf-hnd	Annual cost savings at Puerto Cortés	Outcome	USD per year			15000000			Program report	Report p. 20. Strict lower bound. Beneficiary incidence and costing method undisclosed.	>
+ner-markets	ftf-ner	Livestock markets established	Output	markets			16			Program report	Report p. 21. Compact-wide result may overlap ITT indicators.	=
+ner-fertilizer	ftf-ner	Private-sector fertilizer imports after reforms	Outcome	metric tons			90000			Program report	Report p. 21. More than 90000 metric tons and approximately three times the previous volume.	>
+moz-time	moz-rural	Roundtrip water collection time at primary source, Phase 2	Outcome	minutes	161	2011	76		2013	Difference in differences	Table 7.14. Mean of community medians. Comparison communities changed from 137 to 114 minutes. Estimated difference in changes was -62 minutes (p < 0.05), conditional on parallel trends. 15 treatment and 23 comparison communities.	=
