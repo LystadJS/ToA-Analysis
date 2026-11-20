@@ -1,0 +1,23 @@
+from pathlib import Path
+p=Path('tests/atlas_data.py')
+s=p.read_text().replace("         OR (source_id='ppi' AND measure='sponsor equity commitment')","         OR (source_id='dfc' AND measure='commitment or exposure' AND flow_year IS NOT NULL)\n         OR (source_id='ppi' AND measure='sponsor equity commitment')")
+start='    assert set(panel["scopes"])'
+i=s.index(start)
+s=s[:i]+'''    # EXIM uses the named export market and noncancelled approvals. It is a
+    # separate authorization measure, including the partial FY2025.
+    for r in query("toa_us", "SELECT * FROM toa.us_contribution WHERE source_id='exim'"):
+        for scope in (r["iso3"], "ALL"):
+            cell = expected[scope, "exim", r["year"], r["actor"]]
+            cell[0] += r["cents"] or 0
+            cell[1] += r["known"]
+            cell[2] += r["records"]
+
+'''+s[i:]
+p.write_text(s)
+p=Path('atlas/app.js')
+s=p.read_text().replace('  const sourceRows = [...catalogue.values()].sort(','''  const profile = snap.profiles[state.code];
+  for (const row of [...profile.organizations, ...profile.agreements]) ids.add(row.source_id);
+  if (profile.goods.length) { ids.add('census_goods'); ids.add('schedule_c'); }
+  const sourceRows = [...catalogue.values()].sort(''')
+s=s.replace("safeLink(s.download_url, 'Pinned file')","safeLink(s.download_url, ['usun_toa','ustr_fta'].includes(s.source_id) ? 'Publisher reference' : 'Pinned file')")
+p.write_text(s)

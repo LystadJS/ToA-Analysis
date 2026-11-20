@@ -1,0 +1,36 @@
+from pathlib import Path
+p=Path('R/relationships.R');s=p.read_text().replace('nrow(roster)==47,!anyDuplicated(roster$iso3)','nrow(roster)>0,!anyDuplicated(roster$iso3)').replace('nrow(fta)==20,!anyDuplicated(fta$iso3)','all(fta$iso3 %in% us$country$iso3),!anyDuplicated(fta$iso3)');p.write_text(s)
+p=Path('tests/relationships.R')
+s=p.read_text().replace('          nrow(r[source_id=="ustr_fta"])==20)', '''          nrow(r[source_id=="ustr_fta"])==20,
+          setequal(r[source_id=="cofa",iso3],c("FSM","MHL","PLW")),
+          nrow(r[source_id=="unctad_bit"])==47,
+          r[iso3=="ECU" & source_id=="unctad_bit",status]=="UNCTAD archive status · Terminated")''')
+p.write_text(s)
+p=Path('atlas/app.js')
+s=p.read_text().replace("['usun_toa','ustr_fta'].includes(s.source_id) ? 'Publisher reference' : 'Pinned file'", "['usun_toa','ustr_fta','cofa'].includes(s.source_id) ? 'Reference' : 'Pinned file'")
+s=s.replace('<p class="hint">SHA-256 · ${esc(s.sha256)}</p>', '<p class="hint">${[\'usun_toa\',\'ustr_fta\',\'cofa\'].includes(s.source_id) ? \'Bundled transcription or crosswalk\' : \'Source file\'} SHA-256 · ${esc(s.sha256)}</p>')
+p.write_text(s)
+p=Path('README.md');s=p.read_text().replace('## Visualization style','''## U.S. country relationships and annual contributions
+
+Each country opens with the same four sections covering bilateral goods trade, formal relationships, U.S. organizations and evidence of host-country benefit. The Census figures give U.S. imports from the partner and exports to the partner in current dollars for complete calendar years. The latest matched year appears in the text. The accompanying series covers 232 jurisdictions across 1987–2025. Services and geographically unassigned trade lie outside its scope.
+
+**U.S. contributors** plots each organization's annual dollar amount alongside a dashed line for the full disclosed total in the chosen measure. Choose leading contributors, all organizations, or one organization. The period selector applies to the ranking below the timeline. Federal disbursements, historical obligations, DFC commitments or exposure, EXIM authorizations, sponsor equity and private grants each have their own total. The numeric table gives counts for partial disclosure. Negative adjustments and missing years stay visible. The EXIM archive ends in FY2025 Q3, and the DFC source is an active-project snapshot.
+
+The relationship inventory includes the 20 partners in comprehensive U.S. FTAs through 2025, AGOA eligibility and preference use in the source years, 47 U.S. bilateral investment treaty records with historical UNCTAD statuses, and the three Compacts of Free Association. It also records the 47 names supplied from the USUN Trade over Aid roster on 19 November 2026. The official site returned HTTP 403 during the build. The checked-in transcription preserves its names, including Naoero (Nauru). The roster supplies neither joining dates nor payments. The treaty inventory is selective. Other frameworks, sectoral deals and tariff changes require additional sources. [USUN roster](https://usun.usmission.gov/trade-over-aid/) · [Transcription](data/usun_roster.tsv) · [FTA crosswalk](data/us_fta_partners.tsv)
+
+The U.S. PostgreSQL and SQLite releases contain `us_goods_trade`, `us_relationship` and `us_contribution`. The last table stores exact current-dollar cents and both disclosed and total record counts. Use the source and year together when summing contributors. The China schema has empty counterparts for these U.S.-specific tables. The country downloads include the annual goods and contribution series, documented relationships and source citations.
+
+## Visualization style''')
+p.write_text(s)
+p=Path('Open-Source Adoptions.md')
+p.write_text(p.read_text()+'''
+## Country relationships and longitudinal funding
+
+| Source or tool reviewed | Advantage | Limitation | Selection |
+|---|---|---|---|
+| Archived U.S. Census country workbook and Schedule C | Both trade directions share one reporting basis. The official crosswalk identifies partner geography. | Current-year totals can include unreleased months. Historical joint territories need separate geography. | Adopt the original workbook using R/readxl, full years with reported December world trade, and current-jurisdiction codes. [Archived inputs](data/relationship_sources.tsv) |
+| R Shiny tradedeficits and the Census API | Both support country comparisons. The Shiny source contains monthly SITC detail. | The older Shiny archive ends in 2016. The live API was inaccessible in this build. | Reuse the existing offline D3/JavaScript atlas with the pinned Census workbook. [Shiny project](https://github.com/Karagul/tradedeficits) |
+| EXIM authorization archives and ForeignAssistance.gov | EXIM identifies decision status, market, fiscal year and approved amount. The funding file identifies the disbursing account's funding agency. | Multi-market and domestic EXIM records cannot be attributed to a foreign country. Authorizations differ from payments. | Use eligible EXIM approvals as a distinct series. Preserve the annual federal funding totals in the same chart. [EXIM archive](data/relationship_sources.tsv) |
+| Texts of Trade Agreements, UNCTAD IIA archive, USTR and free-association laws | Partner codes, treaty dates and statuses support a country-level legal inventory. | Older texts include NAFTA and unsigned or superseded provisions. The investment treaty snapshot has historical statuses. | Use TOTA alongside USTR for comprehensive FTA parties, USTR for USMCA, UNCTAD for archived BIT statuses and the statutes for free association. [TOTA](https://github.com/mappingtreaties/tota) · [BIT corpus](https://github.com/ogrnz/BITs) · [Compact sources](data/us_free_association.tsv) |
+| Official USUN Trade over Aid roster | Names initiative participants directly. | No financial observations, joining dates or benefit estimates accompany the supplied list. | Use the supplied roster transcription and keep a separate participation status for every jurisdiction. [Official roster](https://usun.usmission.gov/trade-over-aid/) · [Transcription](data/usun_roster.tsv) |
+''')

@@ -1,0 +1,18 @@
+from pathlib import Path
+p=Path('docs/Evaluation-review.md');p.write_text(p.read_text().replace('Mozartambique','Mozambique').replace('scripts/restore.sh','tests/restore.sh').replace('Rscript R/country.R all','Rscript R/country.R --all'))
+p=Path('README.md');s=p.read_text();i=s.index('To rebuild the HTML');s=s[:i]+'''The **Results** tab ranks up to five identifiable U.S.-linked programs or financing deals per country and shows the published post-completion evidence. Each program lists the financing basis, search status and sources. Evaluation charts preserve the original units, the comparison group and inconclusive findings. Country downloads include the full search trail. [Evaluation coverage and ranking rules](docs/Evaluation-review.md)
+
+'''+s[i:];p.write_text(s)
+p=Path('Open-Source Adoptions.md')
+with p.open('a') as f:f.write('''
+
+## Post-completion evaluation review
+
+| Candidate | Advantages | Limits | Adoption decision |
+| --- | --- | --- | --- |
+| 3ie Development Evidence Portal and the LearningFrom3ie archive | Indexed projects, countries, study abstracts and separate research and program funding fields | The available snapshot ends in 2023. Some funder and result fields are sparse | Use for study discovery and extraction of published results with explicit locators. [Archive](https://github.com/ravivanpong/LearningFrom3ie) |
+| USAID DEC archive and MCC Open Data | Identify agency studies, final reports, and historical MCC obligations at project level | The archived indexes predate many newer projects. The MCC catalog also contains baseline and interim records | Use the agency records to check study identity, timing and sponsorship. [DEC archive](https://github.com/albert-decatur/get-usaid-evals) · [MCC catalogue](https://github.com/openmunilabs/data-mcc-gov) · [MCC transactions](https://github.com/openmunilabs/iati-gen) |
+| GAO R package, IEG completion reviews and AEA plan tracker | Searchable public oversight records, completion reviews and trial registrations | These sources can identify audits or study plans that lack outcome evidence or a qualifying donor role | Use for discovery and corroboration. Require a verified connection to the financed activity before reporting a result. [GAO](https://github.com/CetiAlphaFive/gao) · [IEG archive](https://github.com/euihyunb/World-Bank-Group-MIGA-Development-Effectiveness-) · [AEA archive](https://github.com/difang-huang/aea-plan-tracker) |
+| Existing R/data.table, PostgreSQL, SQLite and D3 workflows | Share the existing country keys, evidence source catalogue, offline rendering and typography | Automated text matching cannot adjudicate commissioning or causal attribution | Extend the existing release and use Python’s standard library for streaming mixed-format catalogues. [Review method](docs/Evaluation-review.md) |
+''')
+p=Path('tests/atlas_browser.py');p.write_text(p.read_text().replace('contains(".evalReport", "15.5 percentage points")','contains(".evaluationReview", "15.5 percentage points")'))

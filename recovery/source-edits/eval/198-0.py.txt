@@ -1,0 +1,4 @@
+from pathlib import Path
+p=Path('R/evaluation_exports.R');s=p.read_text().replace('file.path(out,"evaluation_programs.csv"))','file.path(out,"evaluation_programs.csv"),scipen=999)').replace('file.path(out,paste0(name,".csv")))','file.path(out,paste0(name,".csv")),scipen=999)');p.write_text(s)
+p=Path('tests/atlas_browser.py');p.write_text(p.read_text().replace('assert node(".evalPlotRow").count() == 5','assert node(".evalMark").count() == 5'))
+p=Path('/tmp/eval-research/export.R');p.write_text(p.read_text().replace('paste0(key,".csv")))','paste0(key,".csv")),scipen=999)'))

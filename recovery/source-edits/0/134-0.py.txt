@@ -1,0 +1,37 @@
+from pathlib import Path
+p=Path('R/country_profile.R')
+s=p.read_text().replace('  r <- results[(!is.na(actual)) & level %in% c("Outcome","Output") &\n                 (source_id!="mcc" | !is.na(observed_year))]', '''  r <- results[!is.na(actual) & level %in% c("Outcome","Output")]
+  dated_or_reported <- r[source_id!="mcc" | !is.na(observed_year)]
+  undated_only <- nrow(r)>0 && !nrow(dated_or_reported)
+  if (!undated_only) r <- dated_or_reported''').replace('  r <- head(unique(r[order(evidence_order,-observed_year,-period_end,id)]','''  r[,trade_topic:=grepl("export|trade|customs|market|lead time|border|logistics",indicator,ignore.case=TRUE)]
+  r[,has_baseline:=!is.na(baseline)]
+  r <- head(unique(r[order(evidence_order,-trade_topic,-has_baseline,-observed_year,-period_end,id)]''')
+s=s.replace('r[,.(id,indicator,method,project=name','r[,.(id,indicator,level,method,project=name')
+s=s.replace('if(any(evidence$method=="Difference in differences"))','if (undated_only) "MCC reports monitoring values without an observation date. They document reported activity or outcomes. The timing of any change and its attribution remain unknown." else\n    if(any(evidence$method=="Difference in differences"))')
+s=s.replace('evidence=evidence,assessment=assessment)', 'evidence=evidence,assessment=assessment,undated_monitoring_only=undated_only)')
+s=s.replace('r$project,r$interpretation,r$method,r$locator,r$citation)', 'r$project,r$interpretation,paste(r$method,r$level,sep=" · "),r$locator,r$citation)')
+p.write_text(s)
+p=Path('atlas/profile.js')
+s=p.read_text().replace('${esc(r.method)} · Inspect evidence','${esc(r.method)} · ${esc(r.level)} · Inspect evidence')
+p.write_text(s)
+p=Path('atlas/contribution-timeline.js')
+s=p.read_text().replace("import { esc,", "import { tickStep, ticks } from 'd3-array';\nimport { esc,")
+s=s.replace('    const x=yr=>first===last?370:75+(yr-first)*600/(last-first);\n    const y=value=>178-(value-lo)*147/(hi-lo || 1);','''    const width=window.matchMedia('(max-width:650px)').matches ? 390 : 710;
+    const left=70, right=width-33;
+    const step=hi===lo ? 1 : tickStep(lo,hi,3);
+    const lower=Math.floor(lo/step)*step, upper=Math.ceil(hi/step)*step;
+    const x=yr=>first===last?(left+right)/2:left+(yr-first)*(right-left)/(last-first);
+    const y=value=>178-(value-lower)*147/(upper-lower || 1);''')
+s=s.replace('const yt=[...new Set([lo,(lo+hi)/2,hi])];','const yt=hi===lo ? [lo] : ticks(lower,upper,3);').replace('viewBox="0 0 710 207"','viewBox="0 0 ${width} 207"').replace('xt.map(x),yt.map(y),75,675,31,178','xt.map(x),yt.map(y),left,right,31,178').replace('<text x="69" y="${y(v)+4}"','<text x="${left-6}" y="${y(v)+4}"')
+p.write_text(s)
+p=Path('atlas/app.js')
+s=p.read_text().replace("choose('HND');","""window.matchMedia('(max-width:650px)').addEventListener('change', () => {
+  if (state.tab === 'U.S. contributors') renderEvidence();
+});
+choose('HND');""")
+p.write_text(s)
+p=Path('atlas/contributors.js');p.write_text(p.read_text().replace("field('Period', 'year'","field('Ranking period', 'year'"))
+p=Path('atlas/style.css');p.write_text(p.read_text().replace('.orgTimeline svg text {font-size:14px;}', '.orgTimeline svg text {font-size:11px;}'))
+p=Path('tests/country_profiles.py');s=p.read_text().replace('benefits = 0','benefits = undated_only = 0').replace('    benefits += bool(profile["evidence"])','    benefits += bool(profile["evidence"])\n    undated_only += profile["undated_monitoring_only"]').replace('f"{benefits} jurisdictions have a qualifying U.S.-linked outcome or output.")','f"{benefits} jurisdictions have a U.S.-linked outcome or output, including {undated_only} with undated monitoring only.")');p.write_text(s)
+p=Path('atlas/package.json')
+s=p.read_text().replace('    "d3-geo":','    "d3-array": "3.2.4",\n    "d3-geo":');p.write_text(s)

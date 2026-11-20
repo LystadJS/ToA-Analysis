@@ -1,0 +1,8 @@
+import requests,concurrent.futures
+u={'cn':'https://english.www.gov.cn/archive/whitepaper/202101/10/content_WS5ffa6bbbc6d0f72576943922.html','us':'https://www.congress.gov/crs-product/R40213','uspdf':'https://www.congress.gov/crs_external_products/R/PDF/R40213/R40213.47.pdf','fac':'https://data.foreignassistance.gov/downloads/us_foreign_aid_country.csv','fa':'https://foreignassistance.gov/reports','nepal':'https://duckduckgo.com/html/?q=Nepal+Development+Cooperation+Report+2020+pdf+ministry+of+finance+Nepal+disbursements+China','search':'https://www.google.com/search?q=Nepal+Development+Cooperation+Report+2020+pdf+ministry+of+finance+nepal'}
+def go(kv):
+ k,v=kv
+ try:
+  r=requests.get(v,timeout=18);open('/tmp/toacoverage-'+k,'wb').write(r.content);print(k,r.status_code,len(r.content),r.url,r.text[:87])
+ except Exception as e: print(k,str(e)[:160])
+with concurrent.futures.ThreadPoolExecutor() as ex:list(ex.map(go,u.items()))

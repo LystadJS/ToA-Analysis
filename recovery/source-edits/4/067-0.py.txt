@@ -1,0 +1,48 @@
+from pathlib import Path as P
+p=P('R/clean.R');s=p.read_text();needle='    x <- fread(cached("clg"))[year %in% 2022:2023]'
+s=s.replace(needle,'''    clg <- fread(cached("clg"))
+    original <- e$gcdf3_dataset
+    gaps <- data.table(record_id=paste0("AIDDATA-",original$aid_data_record_id),
+      iso3=original$recipient_iso_3, year=original$commitment_year,
+      keep=is.na(original$adjusted_amount_nominal_usd) & original$recommended_for_aggregates=="Yes")
+    cross <- merge(clg[recommended_for_aggregates=="Yes" & !is.na(amount_nominal_usd_mn) & year<=2021],
+      gaps[keep==TRUE,.(record_id,country_iso3=iso3,year)],by=c("record_id","country_iso3","year"))
+    cross <- cross[country_iso3 %in% country$iso3]
+    stopifnot(!anyDuplicated(cross$record_id))
+    p <- cross[,.(id=paste0("clg-check-",record_id),iso3=country_iso3,source_id="clg",
+      locator=record_id,name=project_title,actor=funder_or_investor,year,period=paste0("CY",year),
+      channel="official finance",sector,status,details=paste("Cross-vintage face value for",
+        sub("AIDDATA-","gcdf-",record_id),"with unknown adjusted commitment. Excluded from time-series totals."),
+      citation=paste0("https://china.aiddata.org/projects/",sub("AIDDATA-","",record_id),"/"))]
+    programs$clg_cross <- p
+    money$clg_cross <- finance(p,cross$amount_nominal_usd_mn*1e6,"cross-vintage face-value disclosure",
+      paste(cross$flow_class,cross$flow_type,sep=" / "),FALSE)
+    x <- clg[year %in% 2022:2023]''');p.write_text(s)
+p=P('R/analyze.R');s=p.read_text().replace('f.amount_estimated,p.project_investment_usd','f.amount_estimated,f.reported_currency,f.reported_amount,f.period_start,f.period_end,p.sponsor_ownership_pct,p.project_investment_usd').replace('s.download_url AS archive,r.*,','s.download_url AS archive,(SELECT t.download_url FROM toa.source t WHERE t.source_id=r.timing_source_id) AS timing_archive,r.*,').replace('annual(us$finance,"fa"','annual(us$finance,"us_sector_review"');p.write_text(s)
+p=P('R/country.R');s=p.read_text().replace('Amounts are current U.S. dollars.','Amounts are current U.S. dollars unless a source currency is shown.').replace('measure!="disbursement"','measure %in% c("adjusted commitment","face-value commitment (CLG)","commitment","portfolio exposure")')
+a=s.index('    if (nrow(philanthropy))');b=s.index('    disclosed <-',a)
+s=s[:a]+'''    if (nrow(philanthropy)) lines <- c(lines,sprintf("- %d reviewed Gates Foundation grants to local grantees total $%s in commitments. [Example grant](%s)",
+             nrow(philanthropy),fmt(sum(philanthropy$usd)),philanthropy$citation[1]))
+    payments <- d$finance[measure=="borrower-reported drawdown",
+      .(amount=sum(reported_amount),facilities=.N,citation=citation[1]),by=.(period_ref,reported_currency)]
+    for (j in seq_len(nrow(payments))) {
+      z <- payments[j]
+      lines <- c(lines,sprintf("- The Treasury recorded %s %s drawn on %d China Eximbank facilities in %s. [Debt register](%s)",
+        z$reported_currency,fmt(z$amount),z$facilities,z$period_ref,z$citation))
+    }
+    aiddata <- d$finance[source_id=="gcdf" & measure=="disbursement"]
+    if(nrow(aiddata)) lines <- c(lines,sprintf("- AidData reports %d dated payment observations, %d–%d. Coverage varies by facility. [Funding records](finance.csv)",
+      nrow(aiddata),min(aiddata$flow_year),max(aiddata$flow_year)))
+    f <- d$finance[source_id=="ppi"]
+    if (nrow(f)) lines <- c(lines,sprintf("- %s sponsor equity at financial close: %s across %d of %d listed stakes with dollar disclosures. Ownership percentages are available for %d. Coverage includes state-owned sponsors. [PPI workbook](%s)",
+      donor,if(all(is.na(f$usd))) "undisclosed" else paste0("$",fmt(sum(f$usd,na.rm=TRUE))),sum(!is.na(f$usd)),nrow(f),sum(!is.na(f$sponsor_ownership_pct)),f$archive[1]))
+'''+s[b:];s=s.replace('source_id!="agoa" &','source_id!="agoa" & (source_id!="mcc" | !is.na(observed_year)) &').replace('"Program monitoring")','"Quarterly program monitoring","Program monitoring")').replace('reported <- reported[order(rank,-topic,level,id)]','reported <- unique(reported[order(rank,-topic,level,-observed_year,-period_end,id)],by=c("provider","program_id","indicator","unit"))').replace('These releases contain no numeric project outcome or output for this country.','No project result meets the briefing criteria. The results extract includes any undated monitoring snapshots.').replace('z$indicator,z$name,actual,z$unit,comparison,z$interpretation,','z$indicator,z$name,actual,z$unit,comparison,paste(if(!is.na(z$period_end)) paste("Period ending",z$period_end,".") else if(!is.na(z$observed_year)) paste("Observed in",z$observed_year,".") else "Observation year unreported.",z$interpretation),');p.write_text(s)
+p=P('R/atlas.R');s=p.read_text().replace(' & !is.na(usd),',',').replace('.(disclosed=sum(usd))','. (disclosed=if(all(is.na(usd))) NA_real_ else sum(usd,na.rm=TRUE), complete=all(!is.na(usd)))'.replace('. (','.(')).replace('us_equity := i.disclosed','`:=`(us_equity=i.disclosed,us_equity_complete=i.complete)').replace('cn_equity := i.disclosed','`:=`(cn_equity=i.disclosed,cn_equity_complete=i.complete)');p.write_text(s)
+p=P('atlas/app.js');s=p.read_text().replace("fa: 'ForeignAssistance.gov',","fa: 'ForeignAssistance.gov · archived country file',\n  us_sector_review: 'ForeignAssistance.gov · sector file', kenya_debt: 'Kenya National Treasury', pacific: 'Lowy Pacific Aid Map', mcc_calendar: 'MCC compact calendars',").replace("id: 'fa'","id: 'us_sector_review'").replace("['fa', 'greenbook']","['us_sector_review', 'greenbook']").replace("'No paired amounts': '#566f71',","'No paired amounts': '#566f71',\n    'Incomplete sponsor disclosures': '#c3ae83',").replace("  if (c.us_equity === c.cn_equity)","  if (!c.us_equity_complete || !c.cn_equity_complete) return 'Incomplete sponsor disclosures';\n  if (c.us_equity === c.cn_equity)").replace('Disclosed commitments at financial close · 1999–2023','Disclosed subtotal for listed stakes at financial close · 1999–2023 · includes state-owned sponsors').replace("        r.actual != null &&","        r.actual != null && (parent(r).source_id !== 'mcc' || r.observed_year != null) &&").replace("r.observed_year : ''","r.observed_year : ' · Observation year unreported'").replace("'No numeric outcome, output or preference-use observation in this release.","'No qualifying result in this release.").replace("    'Program monitoring',","    'Quarterly program monitoring',\n    'Program monitoring',").replace('return rank(a) - rank(b) || a.id','return rank(a) - rank(b) || (b.observed_year ?? 0) - (a.observed_year ?? 0) || a.id')
+s=s.replace('function financeDetail(f) {','''function reportedMoney(f) {
+  return f.reported_currency && f.reported_amount != null
+    ? f.reported_currency + ' ' + new Intl.NumberFormat('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}).format(f.reported_amount)
+    : money(f.usd);
+}
+function financeDetail(f) {''').replace("['Amount', money(f.usd)]","['Reported amount', reportedMoney(f)], ['Period start', f.period_start], ['Period end', f.period_end]").replace("      'Current USD',","      'Reported amount',").replace('esc(money(r.usd))','esc(reportedMoney(r))').replace("['Observed year', r.observed_year]","['Observed year', r.observed_year ?? 'Unreported'], ['Period start', r.period_start], ['Period end', r.period_end], ['Dating basis', r.dating_basis]").replace('<p>${esc(r.interpretation)}</p>','<p>${esc(r.interpretation)}</p>${r.timing_source_id ? safeLink(catalogue.get(r.timing_source_id).download_url, "Timing source") : ""}').replace("['Actor', p.actor],","['Actor', p.actor], ['Sponsor ownership (%)', p.sponsor_ownership_pct],").replace("    ...data.context.map((r) => r.source_id),","    ...data.context.map((r) => r.source_id),\n    ...data.result.map((r) => r.timing_source_id).filter(Boolean),").replace("[...data.program, ...data.context].map((r) => r.source_id),","[...data.program, ...data.context].map((r) => r.source_id).concat(data.result.map((r) => r.timing_source_id).filter(Boolean)),").replace('where both providers have a published amount','only where every listed stake for both providers has a published dollar amount')
+p.write_text(s)

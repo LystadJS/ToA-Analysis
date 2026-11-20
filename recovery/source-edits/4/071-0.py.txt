@@ -1,0 +1,48 @@
+from pathlib import Path as P
+p=P('R/completeness.R');s=p.read_text().replace("WHERE p.source_id='fa' AND f.measure='disbursement' GROUP BY p.iso3,f.flow_year","WHERE p.source_id='us_sector_review' AND f.eligible_for_summary GROUP BY p.iso3,f.flow_year").replace('         economic=get','''         archive=get("SELECT p.iso3,f.flow_year AS year,sum(f.usd) AS previous_database_usd
+                     FROM toa.program p JOIN toa.finance f ON p.id=f.program_id
+                     WHERE p.source_id='fa' GROUP BY p.iso3,f.flow_year"),
+         undated_results=get("SELECT p.iso3,p.source_id,p.name,r.id,r.indicator,r.actual,r.actual_text,
+                     r.unit,r.method,r.dating_basis,p.citation,p.locator FROM toa.program p JOIN toa.result r ON p.id=r.program_id
+                     WHERE r.observed_year IS NULL AND (r.actual IS NOT NULL OR r.actual_text IS NOT NULL) ORDER BY p.iso3,r.id"),
+         missing_stakes=get("SELECT iso3,p.year,p.id,p.name,p.actor,p.sponsor_ownership_pct,p.project_investment_usd,p.locator,s.download_url
+                     FROM toa.program p JOIN toa.finance f ON p.id=f.program_id JOIN toa.source s USING(source_id)
+                     WHERE p.source_id='ppi' AND f.usd IS NULL ORDER BY p.project_investment_usd DESC NULLS LAST,p.id"),
+         missing_commitments=get("SELECT g.iso3,g.year,g.id,g.name,gf.measure,gf.instrument,g.citation,g.locator,
+                     c.id AS related_disclosure_id,cf.usd AS related_face_value_usd
+                     FROM toa.finance gf JOIN toa.program g ON g.id=gf.program_id
+                     LEFT JOIN toa.program c ON c.id=replace(g.id,'gcdf-','clg-check-AIDDATA-') AND c.id LIKE 'clg-check-%'
+                     LEFT JOIN toa.finance cf ON cf.program_id=c.id
+                     WHERE gf.measure IN ('adjusted commitment','face-value commitment (CLG)') AND gf.eligible_for_summary AND gf.usd IS NULL
+                     ORDER BY cf.usd DESC NULLS LAST,g.iso3,g.year,g.id"),
+         economic=get''').replace("f.measure,f.usd FROM toa.program","f.measure,f.usd,f.reported_amount,f.reported_currency FROM toa.program").replace("OR f.measure LIKE '%disbursement%'","OR f.measure='borrower-reported drawdown'")
+s=s.replace('published <- included(old)[,.(database_usd=sum(usd))','published <- included(old)[,.(previous_database_usd=sum(usd))').replace('fsetequal(published,us$us_payments)','fsetequal(published,us$archive)').replace('panel <- merge(merge(panel,us$us_payments,all.x=TRUE),report,all.x=TRUE)','''stopifnot(fsetequal(report,us$us_payments[,.(iso3,year,sector_report_usd=database_usd)]))
+panel <- Reduce(function(a,b) merge(a,b,by=c("iso3","year"),all.x=TRUE),list(panel,us$us_payments,report,us$archive))''')
+s=s.replace('panel[, status := fcase','status_for <- function(database_usd,sector_report_usd) fcase').replace('default="Lower in sector file")]','default="Lower in sector file")\npanel[, status := status_for(database_usd,sector_report_usd)]\npanel[, previous_status := status_for(previous_database_usd,sector_report_usd)]')
+s=s.replace('stopifnot(all(nation$report_world_usd','nation <- merge(nation,us$archive[,.(previous_database_usd=sum(previous_database_usd)),by=year],by="year",all.x=TRUE)\nstopifnot(all(nation$report_world_usd').replace('nation[release=="country_archive",all(report_in_registry_usd==database_usd)]','nation[release=="sector_archive",all(report_in_registry_usd==database_usd)],\n          nation[release=="country_archive",all(report_in_registry_usd==previous_database_usd)]')
+s=s.replace('identical(draw,c(454243778.75,44721731.99)),!any(grepl("disbursement",cn$kenya$measure)))','''identical(draw,c(454243778.75,44721731.99)))
+by_currency <- cn$kenya[measure=="borrower-reported drawdown",.(amount=sum(reported_amount)),by=reported_currency]
+database_draw <- by_currency$amount[match(c("CNY","USD"),by_currency$reported_currency)]
+stopifnot(identical(draw,database_draw))''').replace('c(loan$usd,NA,NA)','c(loan$usd,database_draw)').replace('"No structured Kenyan disbursement row"','"Reconciled facility drawdowns"')
+s=s.replace('# Compact rows', '''for (kind in c("undated_results","missing_stakes"))
+  fwrite(rbindlist(list(USA=us[[kind]],CHN=cn[[kind]]),idcol="provider"),file.path(out,paste0(kind,".csv")))
+fwrite(cn$missing_commitments,file.path(out,"missing_commitments.csv"))
+# Compact rows''').replace('year,database_usd,sector_report_usd)]','year,database_usd,sector_report_usd,previous_database_usd)]').replace('sources=rbind(audit_sources,project_sources)','sources=unique(rbind(audit_sources,project_sources),by="source_id")');p.write_text(s)
+p=P('audit/profile.sql');s=p.read_text().replace('count(f.usd)','count(coalesce(f.reported_amount,f.usd))').replace('WHERE f.usd=0','WHERE coalesce(f.reported_amount,f.usd)=0');p.write_text(s)
+p=P('audit/coverage.html');s=p.read_text().replace('<label id="kindField"', '''<label id="vintageField">U.S. database vintage<select id="vintage"><option value="current">After refresh</option><option value="previous">Before refresh</option></select></label>
+        <label id="kindField"''')
+a=s.index('          Every country-year');b=s.index('        </p>',a);s=s[:a]+'''          All country-attributed U.S. disbursements in the pinned sector file reconcile to the active database. Both vintages include military assistance. The table accounts separately for worldwide, regional and other allocations outside the 250-code registry.
+'''+s[b:];s=s.replace('The PRC database contains no structured Kenyan payment row.','Six facility-level payment records now reconcile to those amounts on pages 25, 26 and 28.')
+a=s.index('        <h3>Where to investigate next');b=s.index('        <details>',a)
+s=s[:a]+'''        <h3>Coverage after the four repairs</h3>
+        <ul>
+          <li>The current U.S. series includes FY2024 and FY2025. Switch vintages above to inspect country-level revisions. FY2025 is provisional.</li>
+          <li>Kenya’s six borrower-reported drawdowns are independently reconciled. AidData reports 152 dated payment observations in eight other recipients. Lowy’s unconfirmed Pacific entries are excluded from financing summaries.</li>
+          <li>Five compact calendars date 6,858 quarterly MCC numeric observations. Another 210 actuals give explicit milestone dates. The 3,089 numeric actual-to-date snapshots with no observation period remain searchable as undated.</li>
+          <li>57 GCDF commitments with unknown adjusted amounts now link to same-year CLG face values. Listed infrastructure sponsors disclose equity on 80 of 366 U.S. stakes and 52 of 161 Chinese stakes. The atlas compares providers only where both have complete disclosure for listed stakes.</li>
+        </ul>
+'''+s[b:];p.write_text(s)
+p=P('audit/coverage.js');s=p.read_text().replace('[country, year, db, sector]','[country, year, db, sector, previous]').replace('{ db, sector });','{ db, sector, previous });').replace('const { db, sector } = us.get','const { db: current, sector, previous } = us.get').replace('  const status =\n    db == null','  const db = $(\'vintage\').value === \'previous\' ? previous : current;\n  const status =\n    db == null').replace("fa: 'ForeignAssistance.gov',","fa: 'ForeignAssistance.gov (old)', us_sector_review: 'ForeignAssistance.gov', kenya_debt: 'Kenya National Treasury', pacific: 'Lowy Pacific Aid Map',").replace("? 'gcdf' : 'fa'","? 'gcdf' : 'us_sector_review'").replace("  state.view = view;","  state.view = view;\n  $('vintageField').hidden = view !== 'compare';").replace("$('compare').onclick", "$('vintage').onchange = () => { state.page = 0; render(); };\n$('compare').onclick").replace('compare the country file in the database with the separately archived U.S. sector report','compare the selected database vintage with the U.S. sector extract').replace("['Database', money(r.db)]","[$('vintage').selectedOptions[0].textContent, money(r.db)]").replace("'database_usd',","'database_usd',\n          'database_vintage',").replace('              r.db,','              r.db,\n              $(\'vintage\').value,')
+a=s.index('const sectorOnly24');b=s.index('const recent',a);s=s[:a]+'''$('revisionNote').textContent =
+  `FY2024 country allocations rose from ${money(fy24.previous_database_usd)} in the earlier release to ${money(fy24.database_usd)} in the database. All ${fy24.registry_countries} reported recipients reconcile to the sector file.`;
+'''+s[b:];s=s.replace('<th>Database · country rows</th>','<th>Before refresh</th><th>After refresh</th>').replace('[r.database_usd, r.report_in_registry_usd','[r.previous_database_usd, r.database_usd, r.report_in_registry_usd').replace('Database country-file vintage','Archived country-file vintage');p.write_text(s)

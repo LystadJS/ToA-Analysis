@@ -1,0 +1,4 @@
+from pathlib import Path
+p=Path('data/gates_recipients.tsv')
+ids={'BFA':['INV-029460'],'ZMB':['INV-010563','INV-074173'],'MOZ':['INV-067310','INV-019032'],'MWI':['INV-008387','INV-064228'],'MLI':['INV-075425'],'CMR':['INV-068804'],'HTI':['OPP19399'],'PER':['OPP23981','OPP51059'],'ZWE':['INV-066092'],'MEX':['OPP24024','OPP51588'],'COL':['OPP1084564','OPP1010953'],'CHN':['OPP49277'],'NER':['INV-010092'],'BWA':['INV-063779'],'SLE':['INV-079339'],'AFG':['INV-067259','INV-084323']}
+p.write_text(p.read_text()+''.join(k+'\t'+iso+'\n' for iso,ks in ids.items() for k in ks))

@@ -1,0 +1,29 @@
+from pathlib import Path
+p=Path('tests/atlas_data.py');s=p.read_text()
+i=s.index('def main(path):')
+s=s[:i]+'''def verify_relationship_profiles(snap, countries):
+    profiles = snap["profiles"]
+    assert set(profiles) == set(countries)
+    relationship_rows = {(r["iso3"], r["source_id"], r["name"]): r
+                         for r in query("toa_us", "SELECT * FROM toa.us_relationship")}
+    goods = {(r["iso3"], r["year"]): r for r in query("toa_us", """
+        SELECT iso3,year,sum(imports_usd) AS imports_usd,sum(exports_usd) AS exports_usd
+        FROM toa.us_goods_trade GROUP BY iso3,year
+    """)}
+    for code, profile in profiles.items():
+        for r in profile["agreements"] + profile["organizations"]:
+            assert r == relationship_rows.pop((code, r["source_id"], r["name"]))
+        for r in profile["goods"]:
+            db = goods.pop((code, r["year"]))
+            assert all(db[key] == r[key] for key in ("year","exports_usd","imports_usd"))
+        assert profile["trade"] and profile["assessment"]
+        bundle = parse(zlib.decompress(base64.b64decode(snap["bundles"][code]), wbits=47))
+        results = {r["id"] for r in bundle["result"] if r["provider"] == "USA"}
+        assert all(r["id"] in results and r["citation"] for r in profile["evidence"])
+    assert not relationship_rows and not goods
+    print("All 250 overview profiles match the U.S. relationship and bilateral goods tables; every displayed U.S. result resolves to its country record.")
+
+
+'''+s[i:]
+s=s.replace('    verify_contributors(snap, countries)','    verify_contributors(snap, countries)\n    verify_relationship_profiles(snap, countries)')
+p.write_text(s)

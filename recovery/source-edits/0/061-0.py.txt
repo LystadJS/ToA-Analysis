@@ -1,0 +1,31 @@
+from pathlib import Path
+import hashlib,csv,subprocess,shutil,urllib.parse,xml.etree.ElementTree as ET
+out=Path('data')
+def rev(path): return subprocess.check_output(['git','-C',str(path),'rev-parse','HEAD'],text=True).strip()
+def remote(directory,repo,rel):return 'https://raw.githubusercontent.com/'+repo+'/'+rev(directory)+'/'+urllib.parse.quote(rel)
+tota=Path('/tmp/r-tota'); ids={37:('Australia','australian-fta'),159:('Korea','korus-fta'),158:('Oman','oman-fta'),121:('Israel','israel-fta'),52:('Singapore','singapore-fta'),53:('Chile','chile-fta'),23:('CAFTA-DR','cafta-dr-dominican-republic-central-america-fta'),26:('Morocco','morocco-fta'),157:('Panama','panama-tpa'),17:('Bahrain','bahrain-fta'),156:('Peru','peru-tpa'),63:('Jordan','jordan-fta'),342:('Colombia','colombia-tpa')}
+base='https://ustr.gov/trade-agreements/free-trade-agreements'
+with open(out/'us_fta_partners.tsv','w') as f:
+ w=csv.writer(f,delimiter='\t',lineterminator='\n');w.writerow(('iso3','agreement','entry_year','citation','corroboration'))
+ for i,(name,slug) in ids.items():
+  rel=f'xml/pta_{i}.xml'; m=ET.parse(tota/rel).getroot().find('meta')
+  for c in m.findall('parties/partyisocode'):
+   if c.text=='USA':continue
+   year=int(m.findtext('date_into_force')[:4])
+   if i==23:year={'SLV':2006,'NIC':2006,'HND':2006,'GTM':2006,'DOM':2007,'CRI':2009}[c.text]
+   title='Dominican Republic–Central America–United States Free Trade Agreement (CAFTA-DR)' if i==23 else 'U.S.–'+name+(' Trade Promotion Agreement' if i in (156,157,342) else ' Free Trade Agreement')
+   w.writerow((c.text,title,year,base+'/'+slug,remote(tota,'mappingtreaties/tota',rel)))
+ for c in ('CAN','MEX'):w.writerow((c,'United States–Mexico–Canada Agreement (USMCA)',2020,base+'/united-states-mexico-canada-agreement','https://www.cbp.gov/trade/priority-issues/trade-agreements/free-trade-agreements/USMCA'))
+schema=('source_id','file_name','title','publisher_url','download_url','sha256')
+with open(out/'relationship_sources.tsv','w') as f:
+ w=csv.writer(f,delimiter='\t',lineterminator='\n');w.writerow(schema)
+ for key,file,title,url,repo,root,rel in [
+ ('exim','exim-authorizations.csv','U.S. EXIM authorizations, FY2007 to FY2025 Q3','https://www.exim.gov/open-government-data','SELVA-BHUVANA/Final-project','/tmp/r-SELVA-BHUVANA','Trend and Impact Analysis of EXIM Bank Authorizations.csv'),
+ ('census_goods','census-country.xlsx','U.S. Census Bureau, trade in goods by country','https://www.census.gov/foreign-trade/balance/country.xlsx','nishanttyagi28/tariffs-oil-american-wallet','/tmp/r-nishanttyagi28','data/raw/census_country/country.xlsx'),
+ ('schedule_c','schedule-c.txt','U.S. Census Bureau, Schedule C country codes','https://www.census.gov/foreign-trade/schedules/c/country.txt','nishanttyagi28/tariffs-oil-american-wallet','/tmp/r-nishanttyagi28','data/raw/crosswalk/schedule_c_country.txt')]:
+  src=Path(root)/rel;shutil.copyfile(src,out/'cache'/file)
+  w.writerow((key,file,title,url,remote(root,repo,rel),hashlib.sha256(src.read_bytes()).hexdigest()))
+with open(out/'relationship_local_sources.tsv','w') as f:
+ w=csv.writer(f,delimiter='\t',lineterminator='\n');w.writerow(schema)
+ for key,file,title,url in [('usun_toa','usun_roster.tsv','USUN Trade over Aid roster, user-supplied transcription, 19 November 2026','https://usun.usmission.gov/trade-over-aid/'),('ustr_fta','us_fta_partners.tsv','U.S. comprehensive free trade agreement partners, through 2025',base)]:
+  w.writerow((key,file,title,url,url,hashlib.sha256((out/file).read_bytes()).hexdigest()))

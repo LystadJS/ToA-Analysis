@@ -1,0 +1,41 @@
+from pathlib import Path
+p=Path('R/atlas.R')
+s=p.read_text().replace('source("R/atlas_contributors.R")','source("R/atlas_contributors.R")\nsource("R/country_profile.R")').replace('bundles <- list()', '''db <- connect("toa_us")
+load_rows <- function(table) as.data.table(dbGetQuery(db,paste("SELECT * FROM toa.",table,sep="")))
+us$contribution <- load_rows("us_contribution")
+goods <- load_rows("us_goods_trade")
+relationships <- load_rows("us_relationship")
+dbDisconnect(db)
+us_results <- merge(us$result,us$program[,.(program_id=id,source_id,name,locator,citation)],by="program_id")
+us_results[us$source,on="source_id",archive:=i.download_url]
+profiles <- list()
+bundles <- list()''').replace('  tables <- list()', '''  profiles[[code]] <- country_profile(countries[iso3==code,name],code,goods[iso3==code],
+      relationships[iso3==code],us_results[iso3==code])
+  tables <- list()''').replace('exclusions=exclusions,bundles=bundles','exclusions=exclusions,profiles=profiles,bundles=bundles')
+p.write_text(s)
+p=Path('R/atlas_contributors.R')
+s=p.read_text();start=s.index('  raw <-');end=s.index('  annual <-')
+s=s[:start]+'''  by_country <- copy(us$contribution)
+  setnames(by_country,"source_id","source")
+  overall <- by_country[,.(cents=if(all(is.na(cents))) NA_real_ else sum(cents,na.rm=TRUE),
+                           known=sum(known),records=sum(records)),by=.(source,year,actor)][,iso3:="ALL"]
+  all_rows <- rbindlist(list(by_country,overall),use.names=TRUE)
+  sector <- us$program[source_id=="us_sector_review",id]
+  benchmark <- us$finance[eligible_for_summary==TRUE & program_id %in% sector & measure=="disbursement",
+                          .(total_cents=sum(round(usd*100))),by=.(iso3,year=flow_year)]
+'''+s[end:]
+p.write_text(s)
+p=Path('R/country.R')
+s=p.read_text().replace('source("R/visualize.R")','''source("R/visualize.R")
+source("R/country_profile.R")
+profile_db <- connect("toa_us")
+profile_table <- function(table) as.data.table(dbGetQuery(profile_db,paste0("SELECT * FROM toa.",table)))
+goods <- profile_table("us_goods_trade")
+relations <- profile_table("us_relationship")
+contributions <- profile_table("us_contribution")
+dbDisconnect(profile_db)''').replace('  fmt <- function(x)', '''  profile <- country_profile(us$coverage$name,iso,goods[iso3==iso],relations[iso3==iso],us$results)
+  fwrite(profile$goods,file.path(out,"bilateral_goods.csv"))
+  fwrite(relations[iso3==iso][order(kind,name,source_id)],file.path(out,"us_relationships.csv"))
+  fwrite(contributions[iso3==iso][order(source_id,year,actor)],file.path(out,"us_contributions.csv"))
+  fmt <- function(x)''').replace('    "", "## Financing", "")','    "",profile_markdown(profile),"## Financing", "")')
+p.write_text(s)

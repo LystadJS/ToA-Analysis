@@ -1,0 +1,40 @@
+from pathlib import Path
+import hashlib,csv,shutil
+p=Path('data')
+s=Path('/tmp/bit-ogrnz/data/0-data_cleaned.csv');shutil.copyfile(s,p/'cache/unctad-bit.csv')
+with (p/'relationship_sources.tsv').open('a') as f:csv.writer(f,delimiter='\t',lineterminator='\n').writerow(['unctad_bit','unctad-bit.csv','UNCTAD IIA Navigator bilateral investment treaty archive (2023 repository snapshot)','https://investmentpolicy.unctad.org/international-investment-agreements','https://raw.githubusercontent.com/ogrnz/BITs/88b457211b556988e2659d5cb696ec6f4f84b3c4/data/0-data_cleaned.csv',hashlib.sha256(s.read_bytes()).hexdigest()])
+(p/'us_free_association.tsv').write_text('iso3\tentry_year\tstatute\tcitation\nFSM\t1986\tPublic Law 99-239\thttps://www.congress.gov/bill/99th-congress/house-joint-resolution/187\nMHL\t1986\tPublic Law 99-239\thttps://www.congress.gov/bill/99th-congress/house-joint-resolution/187\nPLW\t1994\tPublic Law 99-658\thttps://www.govinfo.gov/link/statute/100/3672\n')
+with (p/'relationship_local_sources.tsv').open('a') as f:csv.writer(f,delimiter='\t',lineterminator='\n').writerow(['cofa','us_free_association.tsv','U.S. Compacts of Free Association with three sovereign Pacific partners','https://www.doi.gov/oia/compacts-of-free-association','https://github.com/unitedstates/python-us/blob/e866affd160aedd6539f0ccd06a5ed2ec52b5cb2/README.md#states',hashlib.sha256((p/'us_free_association.tsv').read_bytes()).hexdigest()])
+p=Path('R/relationships.R');s=p.read_text()
+s=s.replace('  roster <- fread','''  compact <- fread("data/us_free_association.tsv")[,.(iso3,source_id="cofa",name="Compact of Free Association",
+    kind="Compact",status="Sovereign state in free association with the United States",first_year=entry_year,
+    detail=paste("The compact governs the bilateral relationship, including economic assistance.",statute),citation)]
+  bits <- fread("data/cache/unctad-bit.csv",select=c("Party1","Party2","Treaty type","Status",
+                                                      "Date of signature","Date of entry into force","name"))
+  bits <- bits[`Treaty type`=="Bilateral Investment Treaties" &
+               (Party1=="United States of America" | Party2=="United States of America")]
+  bits[,iso3:=to_iso(fifelse(Party1=="United States of America",Party2,Party1))]
+  stopifnot(!anyNA(bits$iso3))
+  bits <- bits[,.(iso3,source_id="unctad_bit",name,kind="Investment treaty",
+    status=paste("UNCTAD archive status ·",Status),
+    first_year=as.integer(substr(`Date of signature`,7,10)),
+    detail=paste0("First year shown is signature. ",
+      fifelse(is.na(`Date of entry into force`) | !nzchar(`Date of entry into force`),"",
+              paste0("Entry into force in the source: ",`Date of entry into force`,". ")),
+      "Status is from the archived inventory and may have changed."),
+    citation=sources[source_id=="unctad_bit",download_url])]
+  roster <- fread''')
+s=s.replace('list(org,mcc,agoa,fta,toa)','list(org,mcc,agoa,fta,toa,bits,compact)')
+p.write_text(s)
+p=Path('R/country_profile.R');s=p.read_text().replace('"Trade preference")','"Trade preference","Investment treaty","Compact")',1)
+s=s.replace('  r <- results[','''  claims <- results[source_id=="agoa" & !is.na(actual) & !is.na(observed_year)][order(-observed_year)]
+  if (nrow(claims)) agreements[source_id=="agoa",detail:=paste(detail,
+    sprintf("U.S. imports claiming AGOA totaled %s in %d. Claims measure use of the preference.",money(claims$actual[1]),claims$observed_year[1]))]
+  r <- results[''')
+p.write_text(s)
+p=Path('tests/atlas_browser.py');s=p.read_text().replace('        assert used | {"iso","funding_agency"} == {s["source_id"] for s in exported["sources"]}','''        profile = exported["us_relationship_profile"]
+        used.update(row["source_id"] for key in ("agreements","organizations") for row in profile[key])
+        if profile["goods"]:
+            used.update(("census_goods","schedule_c"))
+        assert used | {"iso","funding_agency"} == {s["source_id"] for s in exported["sources"]}''')
+p.write_text(s)

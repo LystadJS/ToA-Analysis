@@ -1,0 +1,28 @@
+from pathlib import Path
+p=Path('atlas/app.js');s=p.read_text()
+s="import { countryProfile } from './profile.js';\n"+s
+s=s.replace("actor: null, expanded: false","actor: null, timeline: 'leaders', expanded: false").replace("section('Country overview') + contributorPreview", "section('Country overview') + countryProfile(snap.profiles[state.code]) + contributorPreview")
+s=s.replace("    ...data.program.map((r) => r.source_id),","    ...data.program.map((r) => r.source_id),\n    ...snap.profiles[state.code].agreements.map(r => r.source_id),\n    ...snap.profiles[state.code].organizations.map(r => r.source_id),\n    ...(snap.profiles[state.code].goods.length ? ['census_goods','schedule_c'] : []),")
+s=s.replace("sources: [...snap.sources.filter((s) => ids.has(s.source_id)), ...(localContributions.rows.some(r => r.source === agencySource.source_id) ? [agencySource] : [])],","sources: snap.sources.filter(s => ids.has(s.source_id)),\n        us_relationship_profile: snap.profiles[state.code],")
+s=s.replace("if (name !== 'actor') {","if (name !== 'actor' && name !== 'timeline') {").replace("if (name !== 'year') contributorPrefs.year = null;","if (name !== 'year') {\n      contributorPrefs.year = null;\n      contributorPrefs.timeline = 'leaders';\n    }")
+s=s.replace("const sourceRows = [...snap.sources, agencySource]", "const sourceRows = [...snap.sources]")
+p.write_text(s)
+p=Path('atlas/contributors.js');s=p.read_text()
+s="import { timeline } from './contribution-timeline.js';\n"+s
+s=s.replace("  funding_agency: {",'''  dfc: {
+    name: 'DFC project commitments or exposure', total: 'Disclosed DFC commitments or exposure', period: 'FY',
+    note: 'Active projects grouped by the fiscal year in the portfolio, including predecessor projects. Instruments include insurance. Undated projects are outside the timeline.',
+  },
+  exim: {
+    name: 'EXIM export credit authorizations', total: 'EXIM approved export credit', period: 'FY',
+    note: 'Approved, noncancelled authorizations by export market. Guarantees, insurance and loans can support U.S. exporters. FY2025 runs through Q3.',
+  },
+  usun_toa: {
+    name: 'Trade over Aid participation', total: 'Annual dollar amount unreported', period: '',
+    note: 'The USUN roster supplied on 19 November 2026 identifies participants. No annual funding series was supplied.',
+  },
+  funding_agency: {''').replace("    ${tools}<div", "    ${tools}${timeline(rows,filters.timeline,m.period,src)}<div")
+s=s.replace("    ${slice.length ? `<div", "    ${src === 'usun_toa' ? '' : slice.length ? `<div")
+s=s.replace("esc(m.total)}</span><strong>${slice.length ? short(total) : 'No records'}","esc(m.total)}</span><strong>${slice.length ? short(total) : src === 'usun_toa' ? 'Unreported' : 'No records'}")
+s=s.replace("safeLink(source.download_url, 'Pinned source file')","safeLink(source.download_url, src === 'usun_toa' ? 'USUN roster' : 'Pinned source file')")
+p.write_text(s)

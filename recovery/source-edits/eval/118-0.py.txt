@@ -1,0 +1,12 @@
+from pathlib import Path
+p=Path('R/evaluation_review.R');s=p.read_text()
+s=s.replace('  dfc <- dfc[,.(iso3,project_key=paste0("dfc:",ref),title=name,organization=actor,','''  dfc[, description:=sub("^[0-9]{5} - ","",details)]
+  dfc[, display:=fifelse(grepl("^[0-9]{5} - ",details) & !is.na(details),paste(name,description,sep=" · "),name)]
+  dfc <- dfc[,.(iso3,project_key=paste0("dfc:",ref),title=display,organization=actor,''').replace('ref,name),citation)]','ref,display),citation)]')
+s=s.replace('  pam <- pam[!is.na(value)', '''  # Peace Corps operating lines and Compact sector grants describe one named
+  # program in a country. Use their disbursement transactions just once.
+  pam[grepl("^(Compacts? of Free Association|U[.]S[.] Peace Corps)",`Project Title`,ignore.case=TRUE),
+    `:=`(`Website Project ID`=paste0(iso3,":",fifelse(grepl("Peace Corps",`Project Title`),"PEACE","COFA")),
+         `Project Title`=fifelse(grepl("Peace Corps",`Project Title`),"U.S. Peace Corps country program","Compacts of Free Association economic assistance"))]
+  pam <- pam[!is.na(value)''')
+p.write_text(s)

@@ -1,0 +1,10 @@
+from pathlib import Path
+p=Path('audit/coverage.js');s=p.read_text().replace("else {state.from=Math.max(first,s.last_year-10,s.first_year-1);state.to=Math.min(last,s.last_year+2);}","else {state.from=Math.max(first,s.last_year-s.first_year<=15?s.first_year-1:s.last_year-10);state.to=Math.min(last,s.last_year+2);}")
+s=s.replace("const recent=data.national.filter", """const fy24=data.national.find(r=>r.release==='sector_archive' && r.year===2024);
+const sectorOnly24=data.usa.filter(([,year,db,sector])=>year===2024 && db==null && sector!=null);
+const added=sectorOnly24.reduce((total,row)=>total+row[3],0);
+$('revisionNote').textContent=`In FY2024 the database holds ${(100*fy24.database_usd/fy24.report_in_registry_usd).toFixed(1)}% of the sector file’s country-attributed dollars. Only ${money(added)} of the ${money(fy24.report_in_registry_usd-fy24.database_usd)} difference belongs to the ${sectorOnly24.length} recipients absent from the database year. Most of the revision affects already-listed recipients.`;
+const recent=data.national.filter""")
+p.write_text(s)
+p=Path('audit/coverage.html');s=p.read_text().replace('<div class="scroller"><table class="evidence" id="nationalTable">','<p id="revisionNote"></p><div class="scroller"><table class="evidence" id="nationalTable">');p.write_text(s)
+p=Path('tests/coverage_browser.py');s=p.read_text().replace('        page = context.new_page()','        page = context.new_page()\n        page.set_default_timeout(6000)').replace('        el("#kind").select_option("Results")','        el("#kind").select_option("Programs")\n        expect(el("#legend")).to_contain_text("Record present")\n        el("#kind").select_option("Results")');p.write_text(s)

@@ -1,0 +1,5 @@
+from pathlib import Path
+p=Path('atlas/package.json')
+p.write_text(p.read_text().replace('  "scripts": {\n    "build": "node build.mjs"\n  },','  "scripts": {"build": "node build.mjs"},'))
+p=Path('.gitignore')
+p.write_text(p.read_text()+'__pycache__/\n')

@@ -1,0 +1,2 @@
+from pathlib import Path
+p=Path('R/coverage_plot.R');s=p.read_text().replace('rect(60+21*dx-.11,15.1,60+21*dx-.05,82.3,col="#455657",border=NA)','rect(60+21*dx-.11,81.3-(nrow(group)-1)*1.98-.77,60+21*dx-.05,82.07,col="#455657",border=NA)');p.write_text(s)

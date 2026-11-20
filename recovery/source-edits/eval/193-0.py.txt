@@ -1,0 +1,26 @@
+from pathlib import Path
+s=Path('/tmp/package-country-relationships.py').read_text().replace('len(files)==250*11+2','len(files)==250*13+2').replace('ToA-Analysis/data/usun_roster.tsv','ToA-Analysis/data/evaluation_reports.tsv').replace("    name=\"Trade-over-Aid-audit-evidence.zip\"","""    review='Trade-over-Aid-evaluation-review.zip'
+    inputs={p.name:p for p in (art/'evaluation-review').glob('*.csv')}
+    assert set(inputs)=={'programs.csv','searches.csv','reports.csv','findings.csv'}
+    inputs['Review method.md']=root/'docs/Evaluation-review.md'
+    for path in (root/'data').glob('evaluation_*.tsv'): inputs['sources/'+path.name]=path
+    write_zip(stage/review,inputs)
+    parts[review]=stage/review
+    name="Trade-over-Aid-audit-evidence.zip" """).replace("    files.update(extras)","    files.update(extras)\n    files.update({'evaluations/'+k:v for k,v in inputs.items()})")
+a=s.index('    summary=["Country relationships release ')
+b=s.index("    (stage/'Verification.txt').write_text",a)
+s=s[:a]+'''    summary=["Post-completion evaluation release "+commit,""]
+    for key, required in {
+        "build":["47 checks passed","817 ranked records","348314 base rows","52864 base rows"],
+        "restored":["47 checks passed","817 ranked records","348314 base rows","52864 base rows"],
+        "atlas-data":["All 250 Results pages","Every contributor amount","250 country dossiers"],
+        "browser":["Chromium desktop and offline mobile checks passed"],
+        "profiles":["All 250 country evaluation exports match the Results page"]}.items():
+        output=Path('/tmp/eval-research/'+key+'.log').read_text()
+        assert all(q in output for q in required),(key,required,output[-350:])
+        summary.append(key)
+        summary.extend(l for l in output.splitlines() if l.startswith(("Verified","All 250","Every contributor","250 country","Chromium","toa_restore_","toa_us verified","toa_china verified","47 checks")))
+    summary.extend(["","817 U.S.-linked records ranked in 184 jurisdictions. Six catalogue searches per ranked record.",
+                    "Seven qualifying studies cover six programs. Three additional publications cover two programs with an unverified donor/host evaluation role.",
+                    "Both database backups were restored. SQLite base tables and views matched the corresponding restored PostgreSQL databases."])
+'''+s[b:];p=Path('/tmp/package-evaluation-review.py');p.write_text(s)

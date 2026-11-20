@@ -1,0 +1,6 @@
+from pathlib import Path
+p=Path('R/mirror_sqlite.R')
+s=p.read_text().replace('paste("SELECT",pg_sql,"FROM toa.",table,sep=c(" "))','sprintf("SELECT %s FROM toa.%s",pg_sql,table)')
+p.write_text(s)
+p=Path('environment.yml');p.write_text(p.read_text().replace('  - r-rpostgres','  - r-rsqlite=3.53.3\n  - r-rpostgres'))
+p=Path('scripts/build.sh');p.write_text(p.read_text()+'Rscript R/mirror_sqlite.R\n')

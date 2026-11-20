@@ -1,0 +1,2 @@
+from pathlib import Path
+p=Path('tests/coverage_data.R');s=p.read_text().replace('stopifnot(fsetequal(m,csv)', 'setcolorder(m,names(csv))\nstopifnot(fsetequal(m,csv)');p.write_text(s)

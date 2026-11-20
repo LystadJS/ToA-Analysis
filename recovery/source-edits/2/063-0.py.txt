@@ -1,0 +1,3 @@
+from pathlib import Path
+p=Path('README.md');s=p.read_text().replace('A country needs at least one disclosed amount from each provider for a paired comparison.','The map ranks providers when every listed stake for both providers has a disclosed amount.');p.write_text(s)
+p=Path('tests/atlas_browser.py');s=p.read_text().replace('including map layers, all 250 selectors, ', 'including contributor shares and trends, map layers, all 250 selectors, ');p.write_text(s)

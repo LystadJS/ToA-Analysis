@@ -1,0 +1,21 @@
+from pathlib import Path
+p=Path('atlas/contributors.js');s=p.read_text().replace('const ticks = [...new Set([low,0,high])];','const ticks = [...new Set([low,0,high / 2,high])];')
+s=s.replace('  const maximum = Math.max(1,Math.abs(a ?? 0),Math.abs(b ?? 0));','''  const low = Math.min(0,a ?? 0,b ?? 0), high = Math.max(0,a ?? 0,b ?? 0);
+  const span = high-low || 1;
+  let comparison = '';
+  if (a != null && b != null) {
+    comparison = a === b ? 'The two totals agree.' : 'The funding-file total is ' + usd(Math.abs(a-b)) +
+      (a < b ? ' lower' : ' higher') + ' than the atlas total' +
+      (b > 0 ? ' (' + percent(share(a,b)) + ' of the atlas amount).' : '.');
+  }''')
+s=s.replace('Different release dates can revise the total.</p>',"Different release dates can revise the total. ${year === '2025' || year === 'all' ? 'FY2025 may be partial.' : ''}</p>")
+s=s.replace('<i style="width:${100*Math.abs(value ?? 0)/maximum}%"></i>','<i class="${value < 0 ? \'vintageNegative\' : \'\'}" style="left:${100*(Math.min(0,value ?? 0)-low)/span}%;width:${100*Math.abs(value ?? 0)/span}%"></i>').replace('<p class="hint">${safeLink(sources.get(\'us_sector_review\').download_url,\'Atlas sector file\')}</p>','<p class="hint">${esc(comparison)} ${safeLink(sources.get(\'us_sector_review\').download_url,\'Atlas sector file\')}</p>')
+s=s.replace('Explore who funded ${esc(scope)} and how each share changed.','${esc(scope)} · Reported contributions in current U.S. dollars.')
+p.write_text(s)
+p=Path('atlas/style.css');s=p.read_text().replace('.contributorSource {','.vintageBars .vintageTrack i.vintageNegative { background:#b56a48; }\n.contributorSource {');p.write_text(s)
+p=Path('tests/atlas_browser.py');s=p.read_text().replace('        contains(".vintageCheck", "$121,259,455.00")','        contains(".vintageCheck", "$121,259,455.00")\n        contains(".vintageCheck", "$32,067,702.00 lower")').replace('        contains(".vintageCheck", "$19,878,894,683.00")','''        contains(".vintageCheck", "$19,878,894,683.00")
+        source_menu.select_option("gates")
+        contains(".actorRank", "Gates Foundation")
+        contains(".actorRank", "100%")
+        source_menu.select_option("funding_agency")''').replace('including map layers, all 250 selectors, financial totals','including contributor shares and trends, map layers, all 250 selectors, financial totals')
+p.write_text(s)

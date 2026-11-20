@@ -1,0 +1,32 @@
+from pathlib import Path as P
+p=P('R/coverage_plot.R');s=p.read_text();s+='''
+# Show which recipients changed most and whether the current vintage still differs.
+revision <- us[year==2024 & !is.na(previous_database_usd) & !is.na(database_usd)]
+revision[, change:=database_usd-previous_database_usd]
+revision <- revision[order(-abs(change),iso3)][1:8][order(change)]
+png(file.path(out,"US-spending-coverage.png"),width=1500,height=900,res=145,type="cairo")
+par(mar=c(4.8,8.1,5.6,2.2),family="sans",las=1)
+rows <- seq_len(nrow(revision))
+before <- revision$previous_database_usd/1e9
+after <- revision$database_usd/1e9
+plot(range(c(0,before,after))*c(1,1.06),range(rows)+c(-.6,.6),type="n",axes=FALSE,xlab="",ylab="")
+axis(1,col.axis="#26474a",col="#a8b7b0")
+axis(2,at=rows,labels=revision$name,tick=FALSE,col.axis="#26474a",cex.axis=.78)
+abline(v=axTicks(1),col="#e1e8e2",lty=3)
+segments(before,rows,after,rows,col="#a4b6b0",lwd=3)
+points(before,rows,pch=1,col="#a3542d",cex=1.4,lwd=2)
+points(after,rows,pch=16,col="#197467",cex=1.35)
+mtext("Country-attributed disbursements, current US$ billions",1,2.6)
+mtext("U.S. spending revisions by recipient in FY2024",3,3.2,adj=0,cex=1.45,font=2)
+mtext("Eight largest absolute revisions among recipients with amounts in both vintages",3,1.8,adj=0,cex=.94)
+legend("bottomright",c("Earlier country file","Refreshed sector file"),pch=c(1,16),col=c("#a3542d","#197467"),bty="n",cex=.85)
+mtext("Source: U.S. ForeignAssistance.gov country and sector files. All FY2024 recipient amounts now reconcile to the sector file.",
+      1,4.1,adj=0,cex=.71)
+invisible(dev.off())
+''';p.write_text(s)
+p=P('tests/atlas_data.py');s=p.read_text().replace('SELECT p.iso3, sum(f.usd) AS disclosed','SELECT p.iso3, sum(f.usd) AS disclosed, bool_and(f.usd IS NOT NULL) AS complete').replace('equity = {row["iso3"]: row["disclosed"] for row in stakes}', 'stakes = list(stakes)\n        equity = {row["iso3"]: row["disclosed"] for row in stakes}\n        complete = {row["iso3"]: row["complete"] for row in stakes}').replace('        for row in query(database, "SELECT * FROM toa.source"):', '        assert all(c[field + "_complete"] == complete.get(code) for code, c in countries.items())\n        for row in query(database, "SELECT * FROM toa.source"):');p.write_text(s)
+p=P('tests/coverage_data.R');s=p.read_text().replace('cat("Embedded HTML','''pending <- fread(file.path(out,"missing_stakes.csv"))
+stopifnot(nrow(pending)==395L, sum(!is.na(pending$implied_sole_sponsor_equity_usd))==6L)
+pending <- fread(file.path(out,"missing_commitments.csv"))
+stopifnot(nrow(pending)==(17743-10517)+(3677-2036),sum(!is.na(pending$related_face_value_usd))==57L)
+cat("Embedded HTML''');p.write_text(s)

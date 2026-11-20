@@ -1,0 +1,7 @@
+from pathlib import Path
+p=Path('R/mirror_sqlite.R');s=p.read_text();a=s.index('    objects <- dbGetQuery(dest');b=s.index('\n  })\n}',a);body=s[a:b];body='\n'.join(l[2:] if l.startswith('  ') else l for l in body.splitlines());s=s[:a]+'    verify_database(pg,dest,database,meta)'+s[b:];pos=s.index('\nexport_database <-');s=s[:pos]+'\nverify_database <- function(pg,dest,database,meta=columns_in(pg)) {\n'+body+'\n}\n'+s[pos:];s=s.replace('cat(database,": verified",','cat(database,"verified",').replace('\npublish()\n','\nif (sys.nframe()==0L) publish()\n');p.write_text(s)
+p=Path('tests/restore.sh');s=p.read_text();s+='''if [[ -f artifacts/toa_us.sqlite || -f artifacts/toa_china.sqlite ]]; then
+  (cd artifacts && sha256sum -c SQLite-SHA256SUMS)
+  TOA_TEST_US="${scratch[0]}" TOA_TEST_CHINA="${scratch[1]}" Rscript tests/verify_sqlite.R
+fi
+''';p.write_text(s)

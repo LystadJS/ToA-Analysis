@@ -1,0 +1,3 @@
+from pathlib import Path
+p=Path('data/atlas_sources.tsv')
+p.write_text(Path('data/sources.tsv').read_text().splitlines()[0]+'\n'+'\t'.join(['funding_agency','us-funding-agency.csv','ForeignAssistance.gov funding agency and account summary, FY2001–25','https://foreignassistance.gov/data','https://raw.githubusercontent.com/ralphbaricsattorney/lancet-usaid-review/d60de6185bb120a6f6d47fdbbc509bfb1ee76d1a/data/exposure_data/us_foreign_aid_funding.csv','cfed84a31c1234807856ae2d8c75b6563cfb8b8bcac11e628a02b1d21a1b3973'])+'\n')

@@ -1,0 +1,63 @@
+from pathlib import Path as P
+p=P('sql/schema.sql');p.write_text(p.read_text()+'''CREATE OR REPLACE VIEW finance_by_currency_period AS
+SELECT p.iso3,p.source_id,f.measure,f.flow_year,f.period_ref,
+       coalesce(f.reported_currency,'USD') AS currency, count(*) AS records,
+       count(coalesce(f.reported_amount,f.usd)) AS disclosed_records,
+       sum(coalesce(f.reported_amount,f.usd)) AS disclosed_amount
+FROM program p JOIN finance f ON f.program_id=p.id
+WHERE f.eligible_for_summary
+GROUP BY p.iso3,p.source_id,f.measure,f.flow_year,f.period_ref,coalesce(f.reported_currency,'USD');
+''')
+p=P('R/country.R');s=p.read_text().replace('"commitment","portfolio exposure"','"commitment or exposure"');p.write_text(s)
+p=P('R/release_evidence.R');s=p.read_text().replace('  page <- function(i)', '  page_text <- function(i)').replace('page(page[i])','page_text(page[i])');p.write_text(s)
+p=P('atlas/app.js');s=p.read_text();i=s.index('function overview()');s=s[:i]+'''function paymentsOverview() {
+  const draws = data.finance.filter(f => f.measure === 'borrower-reported drawdown');
+  const payments = data.finance.filter(f => f.provider === 'CHN' && f.measure === 'disbursement');
+  if (!draws.length && !payments.length) return '';
+  const amounts = new Map();
+  for (const f of draws) {
+    const k = [f.period_ref, f.reported_currency].join(' · ');
+    amounts.set(k, (amounts.get(k) ?? 0) + f.reported_amount);
+  }
+  const lines = [...amounts].map(([k,v]) => esc(k) + ' ' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}));
+  return '<section class="panel"><h3>Reported Chinese payments</h3>' +
+    (draws.length ? `<p>Kenya’s Treasury reports ${draws.length} facility drawdowns. ${lines.join(' · ')}</p><button class="linkBtn" data-jump="Funding" data-filter="kenya_debt">Inspect the facilities →</button>` : '') +
+    (payments.length ? `<p>AidData reports ${payments.length} dated disbursement observations. These cover selected facilities.</p>` : '') + '</section>';
+}
+'''+s[i:];s=s.replace('<div class="overviewGrid">${equity()}${featured()}</div>', '<div class="overviewGrid">${equity()}${featured()}${paymentsOverview()}</div>');p.write_text(s)
+p=P('tests/verify.R');s=p.read_text().replace('dbDisconnect(us)','''check("Currency-period view preserves Kenyan borrower currency",scalar(cn,"select count(*)=2 and sum(disclosed_records)=6 and max(disclosed_amount) filter(where currency='CNY')=454243778.75 from toa.finance_by_currency_period where source_id='kenya_debt'"))
+dbDisconnect(us)''');p.write_text(s)
+p=P('tests/atlas_browser.py');s=p.read_text().replace('        pick("Ethiopia")','''        pick("Kenya")
+        tab("Overview")
+        contains(".overviewGrid", "454,243,778.75")
+        node("[data-filter=kenya_debt]").click()
+        contains("#records", "CNY")
+        pick("Ethiopia")''');p.write_text(s)
+p=P('README.md');s=p.read_text().replace('Country and fiscal year, FY2001–2024 in disbursement rows','Sector, country and fiscal year, FY2001–25. The older country file is archived separately').replace('Eleven reviewed payment observations','152 dated payment observations across eight recipients').replace('Thirteen IDs also occur','57 historical face values for 34 countries are separately linked to GCDF gaps by exact year, recipient and ID. Thirteen IDs in the 2022–23 series also occur').replace('Twelve reviewed private grants','35 reviewed private grants').replace('Covers 12 countries','Covers 28 countries').replace('Baseline year and observation year are independent.','The release adds 6,858 quarterly numeric values across five compacts and dates 210 explicit milestone actuals.').replace('| AidData CLG-Global','| Kenya National Treasury and Lowy Pacific Aid Map | Six FY2022/23 borrower-reported facility drawdowns and 769 unconfirmed Pacific spending entries | Kenya’s original-currency drawdowns reconcile to its creditor totals. Pacific entries are leads and are excluded from summaries. |\n| AidData CLG-Global').replace('The budget fields and cumulative','Use `toa.finance_by_currency_period` for native-currency flows, `toa.private_sponsor_coverage` for the PPI stake denominator and `toa.dated_program_results` for dated numeric outputs and outcomes. Six implied sole-owner equity amounts are stored separately on the program records. The budget fields and cumulative');p.write_text(s)
+p=P('docs/Evidence.md');s=p.read_text().replace('These are monitored times with an unspecified observation end date.','All three quarterly values are recorded for April–June 2016, compact quarter 20. Monitoring alone cannot attribute the changes to MCC.').replace('The project contribution is undisclosed on that page.','The project contribution and measurement period are undisclosed on that page.');p.write_text(s)
+p=P('Open-Source Adoptions.md');s=p.read_text().replace('for the two identified pages','for the creditor summary and facility pages');s+='''
+
+| Additional release or archive | Advantage | Limitation | Adoption decision |
+|---|---|---|---|
+| [MCC compact reporting calendars](https://github.com/openmunilabs/iati-gen) and archived indicator tracking table | Names each compact, calendar period and quarter number. The ITT supplies indicator IDs and quarter-specific actuals. | Five modern compact names match exactly. A publication date cannot date an individual actual-to-date snapshot. | Extend the existing R importer using exact compact names and explicit quarter anchors. |
+| [Pacific Aid Map transaction archive](https://github.com/raphaelmerx/pacific-aid-streamlit) | Records transaction timing, confirmation status, collecting agency and source references. | The retained Chinese spending records are marked unconfirmed. | Include as searchable leads. Direct borrower-register drawdowns receive their own measure. |
+| [AidData CLG](https://www.aiddata.org/data) and GCDF | Shared record IDs permit checking later face-value disclosures against previously unpriced facilities. | Adjusted amounts and nominal face values use different definitions. | Store matched disclosures as linked evidence and exclude them from both historical commitment series. |
+''';p.write_text(s)
+p=P('docs/Coverage.md');s=p.read_text();i=s.index('## Reading the visualizations');tail=s[i:].replace('41 provider','48 provider');p.write_text('''# Country and year completeness audit
+
+The refreshed release reconciles country-attributed U.S. disbursements to the pinned ForeignAssistance.gov sector file. Country coverage on the Chinese side remains strongest for commitments. The borrower register, payment narratives, equity disclosures and dated monitoring records support narrower claims. Each has its own denominator.
+
+| Priority | Verified in this release | Remaining limits |
+|---|---|---|
+| U.S. disbursements | FY2024 rises from $5,919,082,291 across 132 jurisdictions to $42,896,561,185 across 184. FY2025 adds $19,878,894,683 across 173. All 65,874 sector-level rows reconcile at country-year level. The old vintage stays queryable and excluded from active summaries. | Both releases include military assistance. FY2025 finality is unverified. FY2024 has an additional $25,011,117,174 outside the current country registry. Country allocation can fund an implementing partner. |
+| Chinese payments | Kenya’s Treasury reports US$44,721,731.99 and CNY 454,243,778.75 on six China Eximbank facilities in FY2022/23. Individual drawdowns on pp. 25, 26 and 28 reconcile separately in each currency to p. 1. The US$1.6 billion rail agreement on p. 23 shows zero drawn that year on that facility. AidData narratives yield 152 dated payment observations in eight other recipients. | Kenya has one independently reconciled fiscal year in this release. AidData payment observations retain the project citation and have a different evidence basis. Two cumulative snapshots and 769 unconfirmed Pacific spending entries stay outside payment totals. |
+| Commitment and private amounts | CLG supplies matching nominal face values for 57 eligible GCDF commitments across 34 recipients. PPI directly discloses 80 of 366 U.S. and 52 of 161 Chinese sponsor stakes. It supplies ownership percentages on 291 and 130 respectively. Six additional sole-owner stakes have a positive reported project-equity denominator and an implied value stored separately. The Gates sample covers 35 reviewed grants in 28 countries. | A cross-vintage face value cannot supply a missing adjusted commitment. The PPI frame includes state-owned sponsors and omits many private investments. A provider ranking is suppressed if either listed portfolio is incomplete. Project cost never substitutes for sponsor equity. |
+| Dates of benefits | Five MCC compact calendars date 6,858 quarterly numeric observations. Of these, 3,755 measure outcomes or outputs. The source also explicitly dates 210 milestones. The Philippines registration comparison uses three quarter-20 actuals ending June 2016. | 3,089 original numeric actual-to-date snapshots still lack a measurement period, and 1,438 original indicators have no actual. Four of five PRC results lack an observed year. Monitoring supports a descriptive claim. A causal claim requires an appropriate evaluation. |
+
+**Spending report checks.** ForeignAssistance.gov reports national and regional scope in addition to country allocations. The historical USAID Greenbook reconciles in all 76 fiscal periods. In FY2020 it reports $51,057,981,958 in obligations, including $25,293,693,021 of economic obligations attributed to current country codes, $14,123,505,331 of economic obligations outside those codes and $11,640,783,606 of military obligations. [U.S. sector report](https://raw.githubusercontent.com/gracey25/us-foreign-aid-democracy-analysis/ad812f2851d27369bc3d9d85fdd7e8a487911b8e/data/raw/us_foreign_aid_usg_sector.csv) · [Greenbook](https://raw.githubusercontent.com/andrewheiss/foreignassistance/153a89954c523a92be433f64c70d0ef9496e2a7d/data/us_foreignaid_greenbook.xlsx)
+
+Kenya reports credit agreements, stocks, repayments and drawdowns in different columns. The database retains the source currency and reporting interval for drawdowns. China’s State Council 2021 white paper describes foreign assistance over 2013–18. Its scope and time basis cannot establish a percentage of all Chinese country payments covered here. [Kenya’s register](https://raw.githubusercontent.com/m-mburu/KenyaExternalDebtRegister/2bb60d121f548a0c6f8425f8178a2ad8a8b0e0b6/data/Public-Debt-Stock-External-Debt-Register-FY-2022-23.pdf) · [State Council white paper](https://english.www.gov.cn/archive/whitepaper/202101/10/content_WS5ffa6bbbc6d0f72576943922.html)
+
+The audit exports three record-level review lists. `missing_commitments.csv` includes the exact AIDDATA ID, source link and any separately recovered face value. `missing_stakes.csv` includes ownership and implied sole-owner equity when available. It orders records by underlying project size for filing research. `undated_results.csv` identifies reported observations that still need an observation period. Blank dollar values and blank years remain unknown.
+
+'''+tail)

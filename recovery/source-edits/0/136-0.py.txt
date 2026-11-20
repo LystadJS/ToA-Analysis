@@ -1,0 +1,15 @@
+from pathlib import Path
+p=Path('README.md');s=p.read_text().replace('This release has country-attributed program, finance or preference records for **208** entries in the U.S. database and **181** in the PRC database.','The core program, finance and preference tables have country-attributed records for **208** U.S. recipients and **181** PRC recipients. The separate U.S. relationship register covers all 250 jurisdictions.')
+s=s.replace('The treaty inventory is selective.', 'Country overviews give priority to comparison-group studies, program reports and dated monitoring. Where only undated MCC monitoring values are available, the overview states that their timing and attribution are unknown. The treaty inventory is selective.')
+p.write_text(s)
+p=Path('audit/coverage.html');s=p.read_text().replace('<h3>Coverage after the four repairs</h3>','''<h3>U.S. trade and organizational relationships</h3>
+        <p>The grid above audits the core program, finance, result and logistics tables. The atlas and country briefs also cover Census goods trade for 232 jurisdictions, EXIM export credit for 147 markets, DFC portfolio records, and U.S. agreements and initiatives. Those series have distinct reporting periods. The supplied USUN roster identifies 47 participants and gives no annual funding amounts.</p>
+        <h3>Coverage after the four repairs</h3>''');p.write_text(s)
+p=Path('docs/Coverage.md');s=p.read_text()+'''
+## Additional U.S. relationship records
+
+The country atlas includes 232 partners with matched full-year Census merchandise trade and 147 export markets with approved, noncancelled EXIM authorizations. EXIM FY2025 ends in the third quarter. Multi-country approvals, domestic approvals and the Private Export Funding Corporation bucket cannot be assigned to a foreign market. The authorized amount covers export credit, including guarantees and insurance. DFC’s portfolio includes one jurisdiction with no dated amount. It appears in the relationship register.
+
+The through-2025 FTA crosswalk covers 20 partners. The historical UNCTAD investment treaty extract includes 39 records marked in force, six marked signed and two marked terminated. The compacts with Micronesia, the Marshall Islands and Palau appear separately. The USUN roster supplied on 19 November 2026 lists 47 participants. Country codes outside the roster are labeled “not listed on supplied roster.” The transcription has no joining dates or financial amounts. [Relationship source manifest](../data/relationship_sources.tsv) · [Roster transcription](../data/usun_roster.tsv)
+''';p.write_text(s)
+p=Path('atlas/contribution-timeline.js');s=p.read_text().replace('Leading three</option>','Leading three by absolute amount</option>');p.write_text(s)

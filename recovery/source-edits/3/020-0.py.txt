@@ -1,0 +1,4 @@
+from pathlib import Path
+p=Path('README.md')
+s=p.read_text().replace('Both providers use the same schema. For example','Both providers use the same schema. For cross-provider queries, open the U.S. file and run `ATTACH DATABASE \'toa_china.sqlite\' AS prc` to access tables such as `prc.finance`. For example')
+p.write_text(s)

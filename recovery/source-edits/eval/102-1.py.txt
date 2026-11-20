@@ -1,0 +1,5 @@
+from pathlib import Path
+p=Path('R/build.R');s=p.read_text().replace('source("R/relationships.R")','source("R/relationships.R")\nsource("R/evaluation_review.R")').replace('release <- build_relationships(release)','release <- build_evaluation_review(build_relationships(release))').replace('union(tables,relationship_tables)','union(tables,c(relationship_tables,evaluation_tables))');p.write_text(s)
+p=Path('scripts/build.sh');p.write_text(p.read_text().replace('source scripts/start-postgres.sh','scripts/fetch.sh data/evaluation_sources.tsv\nsource scripts/start-postgres.sh'))
+p=Path('R/mirror_sqlite.R');p.write_text(p.read_text().replace('"us_goods_trade","us_contribution","us_relationship")','"us_goods_trade","us_contribution","us_relationship",\n                 "evaluation_program","evaluation_search","evaluation_report","evaluation_finding")'))
+p=Path('R/evaluation_review.R');p.write_text(p.read_text().replace('multiple grants|unspecified|administrative costs|administrative expenses','multiple grants|unspecified|not applicable|administrative costs|administrative expenses'))

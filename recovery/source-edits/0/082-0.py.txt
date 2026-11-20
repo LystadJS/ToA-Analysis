@@ -1,0 +1,20 @@
+from pathlib import Path
+p=Path('atlas/app.js')
+s=p.read_text().replace("  const r = eligible[0];\n", "  const r = eligible[0];\n  if (r?.provider === 'USA' && snap.profiles[state.code].evidence.some(e => e.id === r.id)) return '';\n")
+s=s.replace("  if (b.dataset.jump) {","""  if (b.dataset.chartSource) {
+    Object.assign(contributorPrefs, {scope:'country', source:b.dataset.chartSource,
+      timeline:b.dataset.chartActor || 'leaders', actor:b.dataset.chartActor || null, year:null, expanded:false});
+    activate('U.S. contributors');
+    document.querySelector('.orgTimeline')?.scrollIntoView({block:'start'});
+    return;
+  }
+  if (b.dataset.jump) {""")
+s=s.replace('countryProfile(snap.profiles[state.code])','countryProfile(snap.profiles[state.code], localContributions)')
+p.write_text(s)
+p=Path('atlas/profile.js')
+s=p.read_text().replace('countryProfile(profile)', 'countryProfile(profile, contributions)').replace('  const agreementList =', '''  const chartLink = (source, actor, label) => `<button class="linkBtn" data-chart-source="${esc(source)}" data-chart-actor="${esc(actor)}">${esc(label)} →</button>`;
+  const measures = new Set(contributions.rows.map(r => JSON.stringify([r.source,r.actor])));
+  const agreementList =''')
+s=s.replace("${safeLink(r.citation,'Source')}</p></li>","${safeLink(r.citation,'Source')}${r.source_id === 'usun_toa' ? ' · '+chartLink('usun_toa','','Funding status') : ''}</p></li>")
+s=s.replace("${safeLink(r.citation, 'Source')}</td></tr>", "${safeLink(r.citation, 'Source')}${measures.has(JSON.stringify([r.source_id,r.name])) ? ' · '+chartLink(r.source_id,r.name,'Annual amounts') : ''}</td></tr>")
+p.write_text(s)

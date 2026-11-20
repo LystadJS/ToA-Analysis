@@ -1,0 +1,4 @@
+from pathlib import Path
+p=Path('R/completeness.R')
+s=p.read_text().replace('parts <- strsplit(template,','template <- paste(strsplit(template,"/* COVERAGE_JS */",fixed=TRUE)[[1]], collapse=read_text("audit/coverage.js"))\nparts <- strsplit(template,')
+p.write_text(s)

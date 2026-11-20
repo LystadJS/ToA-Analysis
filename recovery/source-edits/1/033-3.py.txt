@@ -1,0 +1,13 @@
+from pathlib import Path
+p=Path('README.md')
+p.write_text(p.read_text().replace('## Audit completeness by country and year','## Visualization style\n\nEB Garamond sets titles, Atkinson Hyperlegible Next sets labels and explanatory text, and JetBrains Mono sets numeric axes, amounts and codes. The country, coverage and evidence figures use a shared ggplot2 `theme_minimal()` theme. The interactive atlas and coverage matrix use the same white plot surfaces, light guides and typography. Both standalone HTML files embed the fonts. Cairo embeds font subsets in the printable PDFs. Font files and licenses are in [assets/fonts](assets/fonts).\n\n## Audit completeness by country and year'))
+p=Path('Open-Source Adoptions.md')
+p.write_text(p.read_text()+'''
+## Figure rendering and fonts
+
+| Tool compared | Advantage | Limitation | Selection |
+|---|---|---|---|
+| ggplot2 and patchwork | A shared `theme_minimal()` controls print typography and grid lines. Patchwork aligns panels with different scales. | Static output has no country selection or record drill-down. | Use for all generated PDF and PNG figures. [ggplot2](https://ggplot2.tidyverse.org/) · [patchwork](https://patchwork.data-imaginist.com/) |
+| Base R graphics | Ships with R and produces small plots. | Each renderer must position labels, legends and axes by hand. | Replaced for print figures to keep the theme consistent across releases. |
+| D3, SVG and HTML | Keep map zoom, keyboard controls, tooltips and linked evidence available offline. | Browser-rendered charts need explicit typography, spacing and grid rules. | Keep the atlas and audit interactive and match the print theme. Embed the same three [licensed font files](assets/fonts/README.md) in both HTML builds. |
+''')

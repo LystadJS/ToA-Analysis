@@ -1,0 +1,21 @@
+from pathlib import Path as P
+p=P('R/coverage_plot.R');s=p.read_text().replace('axis(2,at=rows,labels=revision$name','recipient <- fifelse(revision$iso3=="COD","DR Congo",fifelse(revision$iso3=="TWN","Taiwan",revision$name))\naxis(2,at=rows,labels=recipient').replace('par(mar=c(4.8,8.1,5.6,2.2)','par(mar=c(5.5,7.5,5.6,2.2)').replace('Source: U.S. ForeignAssistance.gov country and sector files. All FY2024 recipient amounts now reconcile to the sector file.','ForeignAssistance.gov country and sector files. Each refreshed amount reconciles to the sector file.').replace('1,4.1,adj=0,cex=.71','1,3.9,adj=0,cex=.71');p.write_text(s)
+p=P('R/completeness.R');s=p.read_text().replace('  as.numeric(gsub(",","",fields[3],fixed=TRUE))','  if(fields[3]=="-") return(0)\n  as.numeric(gsub(",","",fields[3],fixed=TRUE))').replace('length(loan_line)==1L,grepl','length(loan_line)==1L,get_draw(loan_line,"USD")==0,grepl');s=s.replace('         undated_results=get','''         payments=get("SELECT p.iso3,p.source_id,p.id,p.name,p.actor,f.measure,f.flow_year,f.period_ref,
+                     f.period_start,f.period_end,coalesce(f.reported_currency,'USD') AS currency,
+                     coalesce(f.reported_amount,f.usd) AS amount,p.locator,p.citation,
+                     CASE WHEN p.source_id='kenya_debt' THEN 'Borrower register, reconciled to creditor totals'
+                          ELSE 'AidData project narrative' END AS evidence
+                     FROM toa.program p JOIN toa.finance f ON p.id=f.program_id
+                     WHERE p.source_id IN ('kenya_debt','gcdf') AND f.measure IN ('disbursement','borrower-reported drawdown')
+                     ORDER BY p.iso3,f.flow_year,p.id,f.period_ref"),
+         undated_results=get''').replace('fwrite(cn$missing_commitments','fwrite(cn$payments,file.path(out,"chinese-payment-evidence.csv"))\nfwrite(cn$missing_commitments');p.write_text(s)
+p=P('audit/coverage.html');s=p.read_text().replace('The atlas compares providers only where both have complete disclosure for listed stakes.','Six additional sole-owner stakes can be inferred from disclosed project equity. The atlas ranks providers only where both have complete direct disclosure for listed stakes.');p.write_text(s)
+p=P('tests/coverage_data.R');s=p.read_text().replace('pending <- fread(file.path(out,"missing_stakes.csv"))','''cash <- fread(file.path(out,"chinese-payment-evidence.csv"))
+stopifnot(nrow(cash)==158L,uniqueN(cash$iso3)==9L,cash[currency=="CNY",sum(amount)]==454243778.75)
+pending <- fread(file.path(out,"missing_stakes.csv"))''');p.write_text(s)
+p=P('tests/verify.R');s=p.read_text().replace('dbDisconnect(us)','''raw_mcc <- fread("data/cache/mcc.csv",colClasses="character")
+check("Moldova and Namibia quarter anchors agree with milestone dates in the indicator table",
+      raw_mcc[IndicatorId=="57993",ActualQ10]=="2/27/2013" &&
+      raw_mcc[IndicatorId=="73338",ActualQ10]=="2/29/2012" &&
+      scalar(us,"select count(distinct iso3)=2 from toa.dated_program_results where id like '%-ActualQ10' and ((iso3='MDA' and date '2013-02-27' between period_start and period_end) or (iso3='NAM' and date '2012-02-29' between period_start and period_end))"))
+dbDisconnect(us)''');p.write_text(s)

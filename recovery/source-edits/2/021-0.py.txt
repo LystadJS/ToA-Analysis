@@ -1,0 +1,8 @@
+from urllib.request import urlopen
+from concurrent.futures import ThreadPoolExecutor
+urls=['https://github.com/basedosdados/pipelines/commit/34c7143a4e5d60811ea7f9257e6edc9be5b7afc8.patch','https://raw.githubusercontent.com/Satya-20023/us-foreign-aid-viz/HEAD/generate_data.py','https://raw.githubusercontent.com/andrewheiss/foreignassistance/HEAD/index.qmd','https://raw.githubusercontent.com/andrewheiss/foreign-assistance-data/HEAD/sites']
+def read(url):
+ try:
+  s=urlopen(url,timeout=8).read(450000).decode();print(url,'\n'.join(l for l in s.splitlines() if any(k in l.lower() for k in ['http','agency','zip','source','synthetic','random']))[:3500])
+ except Exception as e: print(url,e)
+with ThreadPoolExecutor(4) as e:list(e.map(read,urls))

@@ -1,0 +1,2 @@
+from pathlib import Path
+p=Path('R/completeness.R');s=p.read_text().replace(r'"\\\\u003c"',r'"\\u003c"');p.write_text(s)

@@ -1,0 +1,11 @@
+from pathlib import Path
+p=Path('docs/Evaluation-review.md');s=p.read_text().replace('evaluation unverified | 37','evaluation unverified | 18').replace('sources searched | 772','sources searched | 791').replace('The search covers','The search covers').replace('The candidate log preserves every match, including unrelated ones.','The candidate log preserves every match, including unrelated ones. The matching rules use the country and activity names in the archives, predominantly in English.').replace('scripts/build-atlas.sh\nRscript','scripts/build-atlas.sh\nRscript R/evaluation_exports.R\nRscript');p.write_text(s)
+p=Path('README.md');p.write_text(p.read_text().replace('all ten base tables','all fourteen base tables').replace('In this release, 23 jurisdictions have a numeric U.S.-linked outcome or output under these criteria','In the original results ledger, 23 jurisdictions have a numeric U.S.-linked outcome or output under these criteria'))
+p=Path('tests/country_profiles.py');s=p.read_text().replace('    brief = (folder / "brief.md").read_text()', '''    review = parse(zlib.decompress(base64.b64decode(snapshot["evaluations"][code]), wbits=47))
+    portfolio = read(folder,"evaluation_programs.csv")
+    assert [(int(r["rank"]),r["project_key"],int(r["amount_cents"]),r["status"]) for r in portfolio] == [
+        (r["rank"],r["project_key"],r["amount_cents"],r["status"]) for r in review["programs"]],code
+    findings = read(folder,"evaluation_findings.csv")
+    assert {(r["report_id"],int(r["sequence"]),r["indicator"],number(r["value"]),r["unit"] or None) for r in findings} == {
+        (r["report_id"],r["sequence"],r["indicator"],r["value"],r["unit"]) for r in review["findings"]},code
+    brief = (folder / "brief.md").read_text()''').replace('All 250 briefs match the atlas narratives','All 250 country evaluation exports match the Results page. All 250 briefs match the atlas narratives');p.write_text(s)

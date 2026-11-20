@@ -1,0 +1,49 @@
+from pathlib import Path
+p=Path('atlas/app.js');s=p.read_text();a=s.index('const esc =');b=s.index('const sourceLabel =',a);k=s.index('const missing =',b);l=s.index('const coverage =',k)
+formatcode=s[a:b]+s[k:l]
+Path('atlas/format.js').write_text(formatcode+'\nexport { esc, fmt, compact, missing, present, num, money, safeLink };\n')
+s=s[:a]+s[b:k]+s[l:]
+s="import { esc, fmt, compact, missing, present, num, money, safeLink } from './format.js';\nimport { contributorView } from './contributors.js';\n"+s
+s=s.replace('const donors =', "const agencySource = snap.contributors.source;\ncatalogue.set(agencySource.source_id, agencySource);\nconst contributorPrefs = { scope: 'country', source: 'funding_agency', year: null, actor: null, expanded: false };\nconst donors =")
+s=s.replace("['Overview', 'Funding',","['Overview', 'U.S. contributors', 'Funding',").replace("  Funding: '<path","  'U.S. contributors': '<path d=\"M4 4v16h17M7 7h12M7 11h8M7 15h4\"/>',\n  Funding: '<path",1)
+s=s.replace('function decode(code) {\n  const bytes = Uint8Array.from(atob(snap.bundles[code])','function decodeBundle(blob) {\n  const bytes = Uint8Array.from(atob(blob)').replace('let data, programs,','let localContributions, overallContributions;\nlet data, programs,')
+s=s.replace('    data = decode(code);','''    data = decodeBundle(snap.bundles[code]);
+    localContributions = decodeBundle(snap.contributors.scopes[code]);
+    Object.assign(contributorPrefs, { scope: 'country', year: null, actor: null, expanded: false });''')
+s=s.replace("sources: snap.sources.filter((s) => ids.has(s.source_id)),","sources: [...snap.sources.filter((s) => ids.has(s.source_id)), ...(localContributions.rows.some(r => r.source === agencySource.source_id) ? [agencySource] : [])],\n        us_contributors: localContributions,")
+s=s.replace("    : state.tab === 'Trade context'", """    : state.tab === 'U.S. contributors'
+        ? renderContributors()
+        : state.tab === 'Trade context'""")
+s=s.replace("function contextView() {","""function renderContributors() {
+  if (contributorPrefs.scope === 'all' && !overallContributions)
+    overallContributions = decodeBundle(snap.contributors.scopes.ALL);
+  const all = contributorPrefs.scope === 'all';
+  return contributorView(all ? overallContributions : localContributions, contributorPrefs, countries.get(state.code).name, catalogue);
+}
+
+function contextView() {""")
+s=s.replace("  const sourceRows = [...snap.sources].sort(", "  if (localContributions.rows.some(r => r.source === agencySource.source_id)) ids.add(agencySource.source_id);\n  const sourceRows = [...catalogue.values()].sort(")
+s=s.replace("    section('Country overview') +","    section('Country overview', '', '<button class=\"linkBtn\" data-jump=\"U.S. contributors\">Explore U.S. contributors →</button>') +")
+s=s.replace("$('evidence').addEventListener('click',", """$('evidence').addEventListener('change', (e) => {
+  const name = e.target.dataset.contributorFilter;
+  if (!name) return;
+  contributorPrefs[name] = e.target.value;
+  if (name !== 'actor') {
+    contributorPrefs.actor = null;
+    contributorPrefs.expanded = false;
+    if (name !== 'year') contributorPrefs.year = null;
+  }
+  renderEvidence();
+  document.querySelector('[data-contributor-filter="' + name + '"]')?.focus({preventScroll:true});
+});
+$('evidence').addEventListener('click',""")
+s=s.replace('  if (b.dataset.jump) {', '''  if (b.hasAttribute('data-contributor-actor') || b.hasAttribute('data-more-contributors')) {
+    if (b.hasAttribute('data-more-contributors')) contributorPrefs.expanded = !contributorPrefs.expanded;
+    else contributorPrefs.actor = b.dataset.contributorActor;
+    renderEvidence();
+    const selector = b.hasAttribute('data-more-contributors') ? '[data-more-contributors]' : '[data-contributor-actor][aria-pressed="true"]';
+    document.querySelector(selector)?.focus({preventScroll:true});
+    return;
+  }
+  if (b.dataset.jump) {''')
+p.write_text(s)

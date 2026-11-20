@@ -1,0 +1,51 @@
+from pathlib import Path
+p=Path('R/mirror_sqlite.R');s=p.read_text();a=s.index('  for (sql in trimws(ddl))');b=s.index('\n}\n\ncolumns_in',a)
+s=s[:a]+'''  ddl <- trimws(ddl)
+  views <- startsWith(ddl,"CREATE OR REPLACE VIEW")
+  for (sql in ddl[!views]) {
+    if (!nzchar(sql) || startsWith(sql,"CREATE SCHEMA") || startsWith(sql,"SET LOCAL")) next
+    sql <- sub("ADD COLUMN IF NOT EXISTS","ADD COLUMN",sql,fixed=TRUE)
+    if (startsWith(sql,"CREATE TABLE")) sql <- paste(sql,"WITHOUT ROWID")
+    dbExecute(dest,sql)
+  }
+  for (field in c("usd","reported_amount")) {
+    dbExecute(dest,sprintf("ALTER TABLE finance ADD COLUMN %s_cents INTEGER",field))
+  }
+  for (table in c("result","context")) {
+    for (field in exact_fields[[table]]) {
+      dbExecute(dest,sprintf("ALTER TABLE %s ADD COLUMN %s_decimal TEXT",table,field))
+    }
+  }
+  for (sql in ddl[views]) {
+    sql <- sub("CREATE OR REPLACE VIEW","CREATE VIEW",sql,fixed=TRUE)
+    # Aggregate exact cents before converting a published total to currency units.
+    sql <- gsub("sum(f.usd)","(sum(f.usd_cents)/100.0)",sql,fixed=TRUE)
+    sql <- gsub("sum(coalesce(f.reported_amount,f.usd))",
+                "(sum(coalesce(f.reported_amount_cents,f.usd_cents))/100.0)",sql,fixed=TRUE)
+    dbExecute(dest,sql)
+  }'''+s[b:];s=s.replace('  if (!fsetequal(expected,actual,all=TRUE))','  # SQLite infers logical for expression columns containing only NULLs.\n  for (field in names(actual)[vapply(actual,is.logical,logical(1))]) {\n    set(actual,j=field,value=as.character(actual[[field]]))\n  }\n  if (!fsetequal(expected,actual,all=TRUE))');p.write_text(s)
+p=Path('README.md');s=p.read_text().replace('Build two PostgreSQL databases and generate a briefing','Build two PostgreSQL databases, export portable SQLite mirrors and generate a briefing');pos=s.index('## Coverage and units');s=s[:pos]+'''## SQLite mirrors
+
+Open `toa_us.sqlite` or `toa_china.sqlite` in an SQLite client for offline analysis. Each file contains the seven evidence tables, their keys and indexes, and all five reporting views. Use unqualified table names such as `program` and `finance_by_currency_period`. Both providers use the same schema. For example, run this in the China file to reproduce the Kenyan Treasury drawdowns in each source currency.
+
+```sql
+SELECT period_ref, currency, records, disclosed_amount
+FROM finance_by_currency_period
+WHERE iso3 = 'KEN' AND source_id = 'kenya_debt'
+ORDER BY currency;
+```
+
+Dates use ISO text, Boolean flags use 1 and 0, and missing observations use SQL NULL. Monetary columns are expressed in their original units. Use `finance.usd_cents` and `finance.reported_amount_cents` for exact integer sums, grouping by currency when using the latter. The reporting views sum integer cents. Indicators and survey lead times retain numeric fields for filtering and arithmetic. The `baseline_decimal`, `actual_decimal`, `target_decimal` and `days_decimal` text columns preserve the original PostgreSQL decimals at full precision.
+
+The full build generates both mirrors in `artifacts/`. To refresh only SQLite from an existing populated release, run `scripts/build-sqlite.sh`. Each export reads a repeatable, read-only PostgreSQL snapshot, compares every base and reporting row, and checks SQLite file integrity and foreign keys. After copying the files, run `sha256sum -c SQLite-SHA256SUMS` in their directory. These files are release snapshots. Updates to the source databases reach them on the next export.
+
+'''+s[pos:];p.write_text(s)
+p=Path('Open-Source Adoptions.md');s=p.read_text();s+='''
+
+## Portable SQLite mirrors
+
+| Project reviewed | Advantage | Limitation for this release | Selection |
+|---|---|---|---|
+| [RSQLite](https://github.com/r-dbi/RSQLite) with DBI and RPostgres | Uses the existing R pipeline, supports transactions and ships the SQLite engine. | SQLite numbers need explicit handling for exact cents and high-precision indicators. | Adopt. Reuse the PostgreSQL schema and reporting SQL, preserve exact values, and compare the rendered views. |
+| [db-to-sqlite](https://github.com/simonw/db-to-sqlite) | Provides a general-purpose command for copying PostgreSQL tables and queries to SQLite. | This release would still need custom handling for its currency aggregates, precision rules and parity checks. | Use RSQLite to keep these rules in the existing build. |
+''';p.write_text(s)

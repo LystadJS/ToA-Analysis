@@ -1,0 +1,31 @@
+from pathlib import Path
+p=Path('data/evaluation_sources.tsv')
+with p.open('a') as f:f.write('gao_catalog\tgao-reports.rds\tU.S. GAO product metadata and summary excerpts through 18 November 2026\thttps://www.gao.gov/reports-testimonies\thttps://raw.githubusercontent.com/CetiAlphaFive/gao/8dff4e3ffa61be15a8cdcc1859674aa159c2b1ce/inst/extdata/gao_links.rds\t53f2a90717dcdc9ba108c0eb21a0d6e6a0a319c7015a5d0a8bc379dccf9a104a\n')
+p=Path('R/evaluation_review.R')
+s=p.read_text().replace('mcc:MOZ:WTR SUPPL','mcc:MOZ:WATER SAN')
+mark='  rows <- rbindlist(list(dfc,ppi,gates,ex,mcc,cases),fill=TRUE)'
+s=s.replace(mark,'''  # DFC describes the Acajutla 378 MW plant. The PPI record identifies
+  # equity in that same facility. Keep the larger individual financing measure.
+  acajutla <- "ppi:SLV:2019:Acajutla Gas-Fired Power Plant and LNG Terminal"
+  if (dfc[project_key=="dfc:9000032030",.N] && ppi[project_key==acajutla,.N]) {
+    stopifnot(dfc[project_key=="dfc:9000032030",amount] >= ppi[project_key==acajutla,amount])
+    dfc[project_key=="dfc:9000032030",search_name:=paste(search_name, "Acajutla Gas-Fired Power Plant and LNG Terminal",sep=" | ")]
+    ppi <- ppi[project_key!=acajutla]
+  }
+  pam <- fread(cmd="gzip -dc data/cache/pacific-aid.csv.gz", na.strings=c("","NA"))
+  pam <- pam[Donor=="United States" & `Confirmation status`=="Confirmed" &
+    `Spent/Committed`=="Spent" & trimws(`Transaction Type`)=="Disbursement" & !is.na(`Website Project ID`)]
+  pam[,iso3:=to_iso(Recipient)]
+  pam <- pam[iso3 %in% us$country$iso3]
+  pam[,value:=numeric_value(`USD Current - Transaction Value`)]
+  # The website ID can identify several unrelated titles. Only group a named
+  # project under its ID. Broad multi-grant and sector-support pools lack that grain.
+  pam <- pam[!is.na(value) & !is.na(`Project Title`) &
+    !grepl("multiple grants|unspecified|administrative costs|administrative expenses",`Project Title`,ignore.case=TRUE)]
+  pam <- pam[,.(amount=sum(value),organization=paste(sort(unique(AgencyName)),collapse=", "),
+    year=max(as.integer(substr(`Final Transaction Date`,1,4))),locator=paste(sort(unique(`2023 Project Identifier`)),collapse=", ")),
+    by=.(iso3,web_id=`Website Project ID`,title=trimws(`Project Title`))]
+  pam <- pam[amount>0,.(iso3,project_key=paste("pam",web_id,title,sep=":"),title,organization,year,amount,
+    source_id="pacific",locator,measure="Cumulative confirmed U.S. disbursements for this named Pacific Aid Map activity",search_name=title)]
+  rows <- rbindlist(list(dfc,ppi,gates,ex,mcc,cases,pam),fill=TRUE)''')
+p.write_text(s)

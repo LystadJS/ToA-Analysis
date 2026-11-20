@@ -1,0 +1,30 @@
+from pathlib import Path
+p=Path('data/evaluation_sources.tsv')
+with p.open('a') as f:f.write('aea_registry\taea-plan-archive.tar.gz\tAEA RCT Registry study-plan archive, 19 November 2026\thttps://www.socialscienceregistry.org/\thttps://codeload.github.com/difang-huang/aea-plan-tracker/tar.gz/28ded50419db26770ccdef88d78ad3d611b489d1\tc20f1ef37a75117cedd98910212f93f577ffdf36108309504df4c00b52a4ca97\n')
+p=Path('scripts/search_evaluations.py');s=p.read_text().replace('import sys','import sys\nimport tarfile').replace("'mcc_catalog','gao_catalog')","'mcc_catalog','gao_catalog','aea_registry')");needle='    for r in read_tsv(gao_file):'
+s=s.replace(needle,'''    with tarfile.open(CACHE/'aea-plan-archive.tar.gz','r:gz') as archive:
+        for member in archive:
+            if not re.search(r'/data/plans/plans_[0-9]{4}\\.csv$',member.name):
+                continue
+            with archive.extractfile(member) as raw:
+                for r in csv.DictReader(io.TextIOWrapper(raw,encoding='utf-8-sig')):
+                    yield ('aea_registry',r['rct_id'],r['title'],'',r['abstract']+' '+r['intervention'],
+                           r['countries'],r['url'],r['first_registered_on'])
+'''+needle)
+# Search common study names as well as transaction labels. These aliases are
+# explicit, reviewable interventions or specific borrower schemes, not effect claims.
+needle='    for p in projects:\n        terms='
+s=s.replace(needle,'''    aliases={r['project_key']:r['aliases'] for r in read_tsv('data/evaluation_aliases.tsv')}
+    for p in projects:
+        if p['project_key'] in aliases: p['search_name'] += ' | '+aliases[p['project_key']]
+        terms=''')
+# Exclude multi-intervention systematic reviews from final evaluation candidates.
+s=s.replace("for r in rows:\n                yield ('threeie'", "for r in rows:\n                if r['product_type']!='ier': continue\n                yield ('threeie'")
+# Omit recognized unrelated historical reports for newly authorized grants/deals.
+# No date cutoff on an AEA registration: registration may predate the intervention.
+s=s.replace("a=terms & primary", """if src_year and p['source_id'] in ('exim','dfc','gates') and p['year'].isdigit() and src_year < int(p['year']) and source!='aea_registry':
+                    continue
+                a=terms & primary""").replace("primary=words(descriptor)","years=re.findall(r'\\b(?:19|20)[0-9]{2}\\b',published or '')\n        src_year=int(years[0]) if years else None\n        primary=words(descriptor)")
+p.write_text(s)
+p=Path('R/evaluation_review.R');s=p.read_text().replace('  p[reports,on=', '  p[reports[eligibility=="Related published evaluation"],on=.(iso3,project_key),status:="Published evaluation found; donor or host role unverified"]\n  p[reports[eligibility=="Donor or host evaluation"],on=').replace('==5L*nrow(p)','==6L*nrow(p)');p.write_text(s)
+p=Path('sql/schema.sql');s=p.read_text().replace('title TEXT NOT NULL, published INTEGER NOT NULL, evaluator','eligibility TEXT NOT NULL, title TEXT NOT NULL, published INTEGER NOT NULL, evaluator').replace('indicator TEXT NOT NULL, result TEXT NOT NULL, value NUMERIC','panel TEXT NOT NULL, indicator TEXT NOT NULL, result TEXT NOT NULL, value NUMERIC');p.write_text(s)

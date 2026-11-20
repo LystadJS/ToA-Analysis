@@ -1,0 +1,6 @@
+from pathlib import Path
+p=Path('R/visualize.R')
+s=p.read_text().replace('      labs(title=title,x=NULL,y=NULL) + toa_theme() +\n      theme(axis.text=element_blank(),panel.grid=element_blank())','      scale_x_continuous(breaks=NULL) + scale_y_continuous(breaks=NULL) +\n      labs(title=title,x=NULL,y=NULL) + toa_theme()')
+p.write_text(s)
+p=Path('R/coverage_plot.R')
+p.write_text(p.read_text().replace('geom_tile(width=.96,height=.93)', 'geom_tile(width=.96,height=.93,show.legend=TRUE)').replace('theme(panel.grid=element_blank(),axis.text.y','theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(),axis.text.y'))

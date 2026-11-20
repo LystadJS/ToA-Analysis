@@ -1,0 +1,6 @@
+from pathlib import Path
+import csv
+p=Path('data/evaluation_screening.tsv')
+with p.open() as f:rows=list(csv.DictReader(f,delimiter='\t'))
+with p.open('w',newline='') as f:
+ w=csv.DictWriter(f,fieldnames=['iso3','project_key','has_lead','screening_url','screening_note'],delimiter='\t',lineterminator='\n');w.writeheader();w.writerows(rows)

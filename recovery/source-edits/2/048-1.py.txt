@@ -1,0 +1,3 @@
+from pathlib import Path as P
+p=P('R/atlas.R');s=p.read_text().replace('source("R/common.R")','source("R/common.R")\nsource("R/atlas_contributors.R")').replace('exclusions=exclusions,bundles=bundles','exclusions=exclusions,bundles=bundles,contributors=atlas_contributors(us)');p.write_text(s)
+p=P('scripts/build-atlas.sh');p.write_text(p.read_text().replace('Rscript R/atlas.R','scripts/fetch.sh data/atlas_sources.tsv\nRscript R/atlas.R'))

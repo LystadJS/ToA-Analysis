@@ -1,0 +1,5 @@
+from pathlib import Path
+p=Path('tests/atlas_browser.py');s=p.read_text(); t=Path('/tmp/relationships-ui-test-snippet').read_text().replace('contains(".countryProfile", "Investment") if False else ','')
+s=s.replace('        contains(".agencyPreview", "85.8%")',t+'        contains(".agencyPreview", "85.8%")')
+s=s.replace('        assert phone.evaluate("document.documentElement.scrollWidth <= innerWidth")','        assert phone.evaluate("document.documentElement.scrollWidth <= innerWidth")',1)
+p.write_text(s)

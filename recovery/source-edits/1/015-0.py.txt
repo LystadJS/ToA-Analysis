@@ -1,0 +1,74 @@
+from pathlib import Path
+p=Path('R/coverage_plot.R');s=p.read_text();s=s[:s.index('# Cairo embeds fonts')]+'''source("R/plot_theme.R")
+tile_panel <- function(cells, palette, title, show_names) {
+  chart <- ggplot(cells,aes(year,recipient,fill=status)) +
+    geom_tile(width=.96,height=.93) +
+    scale_fill_manual(values=palette,limits=names(palette),drop=FALSE) +
+    scale_x_continuous(position="top",breaks=years,labels=substring(years,3),
+                       expand=expansion(add=.5)) +
+    scale_y_discrete(drop=FALSE,expand=expansion(add=.5)) +
+    guides(fill=guide_legend(nrow=3,byrow=TRUE)) +
+    labs(title=title,x=NULL,y=NULL) +
+    toa_theme(10) +
+    theme(panel.grid=element_blank(),axis.text.y=element_text(family=toa_fonts[["body"]],size=9),
+          legend.text=element_text(size=8.5),legend.key.size=grid::unit(10,"pt"),
+          legend.justification="left",legend.box.margin=margin(t=5),
+          plot.margin=margin(6,8,4,4))
+  if (!show_names) chart <- chart +
+    geom_vline(xintercept=2021.5,linewidth=.35,colour="#4d5759") +
+    theme(axis.text.y=element_blank())
+  chart
+}
+
+grDevices::cairo_pdf(file.path(out,"Country-year-coverage.pdf"),width=15,height=10.4)
+count <- 34L
+for (first in seq(1,nrow(countries),by=count)) {
+  group <- countries[first:min(first+count-1,nrow(countries))]
+  codes <- group$iso3
+  full <- CJ(iso3=codes,year=years)
+  label <- function(code) factor(code,levels=rev(codes),
+    labels=rev(paste0(ifelse(nchar(group$name)>32,paste0(substr(group$name,1,30),"…"),group$name)," · ",codes)))
+  a <- merge(full,us[,.(iso3,year,status)],by=c("iso3","year"),all.x=TRUE)
+  b <- merge(full,prc[,.(iso3,year,status)],by=c("iso3","year"),all.x=TRUE)
+  stopifnot(!anyNA(a$status))
+  a[,recipient:=label(iso3)]
+  b[,recipient:=label(iso3)]
+  b[is.na(status),status:="No country row"]
+  b[year>2023,status:="Outside releases"]
+  page <- patchwork::wrap_plots(
+    tile_panel(a,us_colors,"United States · disbursement reconciliation",TRUE),
+    tile_panel(b,cn_colors,"China · commitment amount disclosure",FALSE),ncol=2) +
+    patchwork::plot_annotation(title="Development finance coverage by recipient and year",
+      subtitle="U.S. cells compare fiscal-year disbursements to the sector file. China cells show how many retained calendar-year commitments disclose an amount.",
+      caption=sprintf("FY2001–25. China uses GCDF through 2021 and CLG for 2022–23. An unobserved cell does not establish zero spending.     %d / %d",
+                  ceiling(first/count),ceiling(nrow(countries)/count)),theme=toa_theme(14))
+  print(page)
+}
+invisible(dev.off())
+
+revision <- us[year==2024 & !is.na(previous_database_usd) & !is.na(database_usd)]
+revision[,change:=database_usd-previous_database_usd]
+revision <- revision[order(-abs(change),iso3)][1:8][order(change)]
+revision[,recipient:=factor(iso3,levels=iso3,labels=fcase(iso3=="COD","DR Congo",iso3=="TWN","Taiwan",default=name))]
+points <- melt(revision,id.vars="recipient",measure.vars=c("previous_database_usd","database_usd"),
+               variable.name="release",value.name="usd")
+key <- c("Earlier country file","Refreshed sector file")
+chart <- ggplot(revision,aes(y=recipient)) +
+  geom_segment(aes(x=previous_database_usd/1e9,xend=database_usd/1e9,yend=recipient),
+               colour="#b5bdbd",linewidth=.85) +
+  geom_point(data=points,aes(x=usd/1e9,shape=release,colour=release),size=3.1,stroke=1.1) +
+  scale_shape_manual(values=c(previous_database_usd=1,database_usd=16),labels=key) +
+  scale_colour_manual(values=c(previous_database_usd="#a3542d",database_usd="#197467"),labels=key) +
+  labs(title="U.S. spending revisions by recipient in FY2024",
+       subtitle="Eight largest absolute revisions among recipients with amounts in both vintages",
+       x="Country-attributed disbursements, current US$ billions",y=NULL,
+       caption="ForeignAssistance.gov country and sector files. Each refreshed amount reconciles to the sector file.") +
+  toa_theme(13) + theme(axis.text.y=element_text(family=toa_fonts[["body"]]),panel.grid.major.y=element_blank())
+grDevices::png(file.path(out,"US-spending-coverage.png"),width=1500,height=900,res=145,type="cairo",bg="white")
+print(chart)
+invisible(dev.off())
+''';p.write_text(s)
+p=Path('R/atlas.R');s=p.read_text().replace('source("R/common.R")','source("R/common.R")\nsource("R/fonts.R")');s=s.replace('read_release <- function','writeLines(web_fonts_css(),"artifacts/atlas-build/fonts.css",useBytes=TRUE)\nread_release <- function');p.write_text(s)
+p=Path('R/completeness.R');s=p.read_text().replace('source("R/common.R")','source("R/common.R")\nsource("R/fonts.R")').replace('template <- read_text("audit/coverage.html")','template <- read_text("audit/coverage.html")\ntemplate <- paste(strsplit(template,"/* TOA_FONTS */",fixed=TRUE)[[1]],collapse=web_fonts_css())');p.write_text(s)
+p=Path('atlas/build.mjs');s=p.read_text();i=s.index('const fonts = []');j=s.index('const licenses = []',i);s=s[:i]+'''const fonts = await readFile(path.join(cache, 'fonts.css'), 'utf8');
+'''+s[j:];s=s.replace("  '@fontsource/dm-sans',\n",'').replace("  '@fontsource/instrument-serif',\n",'').replace("fonts.join('\\n')","fonts");p.write_text(s)

@@ -1,0 +1,4 @@
+from pathlib import Path as P
+p=P('R/plot_theme.R');s=p.read_text().replace('Sys.setenv(FONTCONFIG_FILE','if (!nzchar(Sys.getenv("XDG_CACHE_HOME"))) {\n  dir.create(".toa/cache",recursive=TRUE,showWarnings=FALSE)\n  Sys.setenv(XDG_CACHE_HOME=normalizePath(".toa/cache"))\n}\nSys.setenv(FONTCONFIG_FILE').replace('face="bold"','face="plain"');p.write_text(s)
+p=P('R/fonts.R');p.write_text(p.read_text().replace('else "100 800"','else if (family=="Atkinson Hyperlegible Next") "200 800" else "100 800"'))
+p=P('R/visualize.R');p.write_text(p.read_text().replace('breaks=scales::breaks_pretty(5, min.n=2)','breaks=function(limits) { ticks <- pretty(limits,5); ticks[ticks==round(ticks)] }'))

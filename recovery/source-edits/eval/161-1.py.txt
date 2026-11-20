@@ -1,0 +1,59 @@
+from pathlib import Path
+p=Path('scripts/build.sh');p.write_text(p.read_text().replace('Rscript tests/relationships.R','Rscript tests/relationships.R\nRscript tests/evaluations.R'))
+p=Path('tests/restore.sh');p.write_text(p.read_text().replace('TOA_TEST_US="${scratch[0]}" Rscript tests/relationships.R','TOA_TEST_US="${scratch[0]}" Rscript tests/relationships.R\nTOA_TEST_US="${scratch[0]}" TOA_TEST_CHINA="${scratch[1]}" Rscript tests/evaluations.R'))
+p=Path('tests/atlas_browser.py');s=p.read_text().replace('        assert used | {"iso","funding_agency"}','        review = exported["post_completion_review"]\n        used.update(row["source_id"] for key in ("programs","searches","reports") for row in review[key])\n        assert used | {"iso","funding_agency"}')
+needle='        # Start a second reader'
+i=s.index(needle)
+s=s[:i]+'''        tab("Results")
+        pick("Mozambique")
+        contains(".evaluationReview", "1 of 5")
+        assert node(".evalProgram").count() == 5
+        contains(".evalReport", "62 minutes")
+        assert node(".evalPlotRow").count() == 5
+        assert node(".evalReport a").first.get_attribute("href").startswith("https://")
+        node("#evaluationCountry").select_option("GHA")
+        contains(".evalMatrix", "Crop yields overall")
+        contains(".evalReport", "starter pack")
+        pick("Burkina Faso")
+        contains(".evaluationReview", "Published evaluation found; donor or host role unverified")
+        contains(".evalReport", "15.5 percentage points")
+        pick("Antarctica")
+        contains(".evaluationReview", "No program")
+        assert node(".evalProgram").count() == 0
+        pick("Honduras")
+        node(".evalProgram summary").first.click()
+        contains(".evaluationReview", "No qualifying evaluation found")
+        assert not errors, errors
+
+'''+s[i:]
+s=s.replace('        assert not errors, errors\n\n        # Start a second reader','\n        # Start a second reader')
+s=s.replace('        phone.locator(\'[data-tab="U.S. contributors"]\').click()', '''        phone.locator('[data-tab="Results"]').click()
+        phone.locator("#evaluationCountry").select_option("MOZ")
+        expect(phone.locator(".evalReport")).to_contain_text("62 minutes")
+        assert phone.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        phone.locator("#search").fill("HND")
+        phone.locator("#search").press("ArrowDown")
+        phone.locator("#search").press("Enter")
+        phone.locator('[data-tab="U.S. contributors"]').click()''')
+p.write_text(s)
+p=Path('tests/atlas_data.py');s=p.read_text();i=s.index('def main(path):');s=s[:i]+'''def verify_evaluation_bundles(snap, countries):
+    tables = {"programs": "evaluation_program", "reports":"evaluation_report", "searches":"evaluation_search",
+              "findings":"evaluation_finding"}
+    assert set(snap["evaluations"]) == set(countries)
+    rows = {key: defaultdict(list) for key in tables}
+    for key, table in tables.items():
+        sql = f"SELECT * FROM toa.{table}"
+        if key == "findings":
+            sql = "SELECT r.iso3,r.project_key,f.* FROM toa.evaluation_finding f JOIN toa.evaluation_report r USING(report_id)"
+        for r in query("toa_us",sql):
+            rows[key][r["iso3"]].append(r)
+    def sorted_rows(records):
+        return sorted(records,key=lambda r: (r.get("project_key",""),r.get("source_id",""),r.get("report_id",""),r.get("sequence",0)))
+    for code, blob in snap["evaluations"].items():
+        dossier = parse(zlib.decompress(base64.b64decode(blob), wbits=47))
+        for key in tables:
+            assert sorted_rows(dossier[key]) == sorted_rows(rows[key][code]), (code,key)
+    print("All 250 Results pages reconcile with the financing priorities, searches, reports and findings in PostgreSQL.")
+
+
+'''+s[i:];s=s.replace('    verify_contributors(snap, countries)','    verify_evaluation_bundles(snap, countries)\n    verify_contributors(snap, countries)');p.write_text(s)

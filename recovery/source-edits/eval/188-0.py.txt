@@ -1,0 +1,7 @@
+from pathlib import Path
+p=Path('atlas/evaluations.js');s=p.read_text().replace('<circle cx="${at}" cy="13" r="4" class="evalMark"/>','<line x1="${at}" x2="${at+0.01}" y1="13" y2="13" class="evalMark"/>')
+a='<div class="evalPlotTicks" aria-hidden="true"><span>${label(min)}</span><span>${label((min+max)/2)}</span><span>${label(max)}</span></div>'
+b='<div class="evalPlotRow" aria-hidden="true"><span></span><div class="evalPlotTicks">${ticks.map(t => `<span style="left:${pos(t)/224*100}%">${label(t)}</span>`).join(\'\')}</div><span></span></div>'
+assert a in s;s=s.replace(a,b)
+p.write_text(s)
+p=Path('atlas/style.css');s=p.read_text().replace('.evalMark,.evalDot {fill:var(--us);background:var(--us)}','.evalMark {stroke:var(--us);stroke-width:8;stroke-linecap:round;vector-effect:non-scaling-stroke}\n.evalDot {background:var(--us)}').replace('.evalPlotTicks {display:flex;justify-content:space-between;margin-left:calc(36% + .5rem);margin-right:3.3rem;font-size:.73rem}', '.evalPlotTicks {position:relative;min-height:1.2rem;font-size:.73rem}\n.evalPlotTicks span {position:absolute;transform:translateX(-50%)}');p.write_text(s)

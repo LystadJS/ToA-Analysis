@@ -1,0 +1,18 @@
+from pathlib import Path as P
+p=P('sql/schema.sql');s=p.read_text().replace('ALTER TABLE result ADD COLUMN IF NOT EXISTS period_start','ALTER TABLE program ADD COLUMN IF NOT EXISTS implied_sole_sponsor_equity_usd numeric(24,2);\nALTER TABLE result ADD COLUMN IF NOT EXISTS period_start');p.write_text(s)
+p=P('R/clean.R');s=p.read_text().replace('  programs$ppi <- p','''  # The sole named sponsor owns 100% and the workbook reports positive total EQUITY.
+  # Preserve the inferred value separately from direct stake disclosures.
+  total_equity <- numeric_value(x[["Total Equity"]])*1e6
+  sole <- is.na(amount) & !is.na(p$sponsor_ownership_pct) & p$sponsor_ownership_pct==100 &
+    x[["Sponsors Country"]]==origin & !is.na(total_equity) & total_equity>0
+  p[,implied_sole_sponsor_equity_usd:=fifelse(sole,total_equity,NA_real_)]
+  programs$ppi <- p''');p.write_text(s)
+p=P('R/analyze.R');s=p.read_text().replace('p.sponsor_ownership_pct,p.project_investment_usd','p.sponsor_ownership_pct,p.implied_sole_sponsor_equity_usd,p.project_investment_usd');p.write_text(s)
+p=P('R/completeness.R');s=p.read_text().replace('p.sponsor_ownership_pct,p.project_investment_usd','p.sponsor_ownership_pct,p.implied_sole_sponsor_equity_usd,p.project_investment_usd');p.write_text(s)
+p=P('atlas/app.js');s=p.read_text().replace("['Sponsor ownership (%)', p.sponsor_ownership_pct],","['Sponsor ownership (%)', p.sponsor_ownership_pct],\n    ['Implied stake from 100% sole ownership of reported equity', p.implied_sole_sponsor_equity_usd == null ? null : money(p.implied_sole_sponsor_equity_usd)],");p.write_text(s)
+p=P('tests/verify.R');s=p.read_text().replace('dbDisconnect(us)','''for (con in list(us,cn)) check("Three inferred sole-sponsor stakes stay outside disclosed totals",scalar(con,"select count(*)=3 and bool_and(sponsor_ownership_pct=100 and usd is null) from toa.program p join toa.finance f on p.id=f.program_id where implied_sole_sponsor_equity_usd is not null"))
+dbDisconnect(us)''');p.write_text(s)
+p=P('R/country.R');s=p.read_text().replace('    disclosed <- f[!is.na(usd)]','''    implied <- f[!is.na(implied_sole_sponsor_equity_usd)]
+    if(nrow(implied)) lines <- c(lines,sprintf("- The workbook reports 100%% ownership by a sole named sponsor and project equity for %d additional stake(s). The implied equity is $%s, shown separately from directly disclosed stakes. [PPI workbook](%s)",
+      nrow(implied),fmt(sum(implied$implied_sole_sponsor_equity_usd)),implied$archive[1]))
+    disclosed <- f[!is.na(usd)]''');p.write_text(s)

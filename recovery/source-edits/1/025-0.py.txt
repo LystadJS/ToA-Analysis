@@ -1,0 +1,27 @@
+from pathlib import Path
+p=Path("atlas/style.css")
+s=p.read_text().replace("--paper: #f6f6ef","--paper: #fafbf9").replace("--white: #fffefa","--white: #fff").replace("  --sea: #163943;\n","").replace("  --serif: 'Instrument Serif', Georgia, serif;\n  --sans: 'DM Sans', Arial, sans-serif;\n","")
+s=s.replace('font: 12px monospace','font: 12px var(--mono)').replace('border: 1px solid var(--line);\n  border-radius: 9px;', 'border: 0;\n  border-radius: 0;')
+s=s.replace('color: white;\n  background: var(--sea);\n  border-color: var(--sea);','color: var(--ink);\n  background: var(--white);')
+s=s.replace('background: var(--sea);\n  color: #f1f5ef;', 'background: var(--white);\n  color: var(--ink);').replace('solid #547078','solid #c8ceca').replace('.zoom button {\n  color: white;', '.zoom button {\n  color: var(--ink);').replace('background: #3e6268;', 'background: #edf2ef;')
+s=s.replace('stroke: #213e45;', 'stroke: #fff;').replace('stroke: #7da1a4;\n  stroke-width: 0.85;\n  opacity: 0.26;', 'stroke: var(--plot-grid);\n  stroke-width: 0.75;').replace('color: #e2eeea;', 'color: var(--muted);')
+s=s.replace('background: #fffdf3;', 'background: white;').replace('box-shadow: 0 3px 12px #0003;', 'border: 1px solid var(--line);')
+s=s.replace('font: clamp(27px, 2.3vw, 37px) / 1.1 var(--serif);', 'font: clamp(20px, 1.9vw, 30px) / 1.2 var(--mono);').replace('font: 32px/1.1 var(--serif);','font: 26px/1.22 var(--mono);')
+s=s.replace('.panel h3 {\n  font-size: 16px;\n  font-weight: 600;\n}', '.panel h3, #drawerBody h3 {\n  font: 400 23px/1.2 var(--serif);\n}')
+s=s.replace('background: #edf0e9;\n  border-radius: 4px;', 'background: var(--bar-grid);').replace('font: 10px var(--sans);','font: 10px var(--mono);')
+s=s.replace('background:var(--sea); color:var(--white); border-radius:6px;', 'background:white; color:var(--ink); border-bottom:1px solid var(--line);').replace('font: 42px/1.15 var(--serif);','font: clamp(19px, 2.3vw, 34px)/1.25 var(--mono); overflow-wrap:anywhere;').replace('color:#d5e3dd;', 'color:var(--muted);').replace('solid #627978','solid var(--line)')
+s=s.replace('background:#e4ebe4; height:6px; border-radius:2px;', 'background:var(--bar-grid); height:8px;').replace('background:var(--us); border-radius:2px;', 'background:var(--us);').replace('font:10px var(--sans);','font:10px var(--mono);').replace('height:11px; border-radius:4px;', 'height:11px;')
+s=s.replace('  --gold: #ffd375;', '  --gold: #ffd375;\n  --bar-grid: repeating-linear-gradient(to right, var(--plot-grid) 0 1px, transparent 1px 25%);')
+s += """
+.plotGrid { fill:none; stroke:var(--plot-grid); stroke-width:.8; }
+.plotGrid.minor { stroke:var(--plot-minor); stroke-width:.6; }
+.countryloc, .mnum, td.num, .actorAmount, .actorRow b, .mixKey b,
+.equityrow b, .actorHistory td, .vintageBars b, code, pre {
+  font-family:var(--mono);
+}
+"""
+p.write_text(s)
+p=Path('audit/coverage.html')
+s=p.read_text().replace('    <style>','    <style>\n      /* TOA_FONTS */').replace('--paper:#f6f6ef;--light:#fffefa','--paper:#fafbf9;--light:#fff').replace('15px/1.48 system-ui,sans-serif','15px/1.48 var(--sans)').replace('24px Georgia,serif','24px var(--serif)').replace('h1,h2{font-family:Georgia,serif','h1,h2,h3{font-family:var(--serif)').replace('h3{font-size:16px}','h3{font-size:21px}')
+s=s.replace('.cardtitle{display:flex;', '.card{border:0;border-radius:0}.cardtitle{display:flex;').replace('border-radius:2px;border:1px solid #243c3c24','border:0').replace('.cell{border:1px solid #243c3c16;border-radius:2px;', '.cell{border:0;border-radius:0;').replace('      @media(max-width:900px)', '      .matrix thead th:not(:first-child),.val,dd,.pager small,code,pre{font-family:var(--mono)}\n      @media(max-width:900px)')
+p.write_text(s)

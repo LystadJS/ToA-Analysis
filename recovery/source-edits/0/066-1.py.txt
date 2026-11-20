@@ -1,0 +1,6 @@
+from pathlib import Path
+p=Path('R/build.R')
+s=p.read_text().replace('source("R/clean.R")','source("R/clean.R")\nsource("R/relationships.R")').replace('  conn <- connect(database)','  if (provider=="USA") release <- build_relationships(release)\n  conn <- connect(database)').replace('paste(dbQuoteIdentifier(conn,tables)', 'paste(dbQuoteIdentifier(conn,union(tables,relationship_tables))')
+p.write_text(s)
+p=Path('R/mirror_sqlite.R');p.write_text(p.read_text().replace('"context","exclusions")','"context","exclusions",\n                 "us_goods_trade","us_contribution","us_relationship")',1))
+p=Path('scripts/build.sh');p.write_text(p.read_text().replace('scripts/fetch.sh\n','scripts/fetch.sh\nscripts/fetch.sh data/atlas_sources.tsv\nscripts/fetch.sh data/relationship_sources.tsv\n'))

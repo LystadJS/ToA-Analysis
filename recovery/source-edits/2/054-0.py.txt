@@ -1,0 +1,48 @@
+from pathlib import Path
+p=Path('atlas/app.js');s=p.read_text().replace('import { contributorView }','import { contributorPreview, contributorView }').replace('section(\'Country overview\', \'\', \'<button class="linkBtn" data-jump="U.S. contributors">Explore U.S. contributors →</button>\') +','section(\'Country overview\') + contributorPreview(localContributions) +')
+p.write_text(s)
+p=Path('atlas/style.css');s=p.read_text();s+='''
+.agencyPreview { margin-bottom:15px; }
+.previewHeading,.mixKey { display:flex; gap:8px 16px; align-items:center; flex-wrap:wrap; }
+.previewHeading { justify-content:space-between; }
+.agencyMix { display:flex; height:11px; border-radius:4px; overflow:hidden; margin:6px 0 8px; }
+.agencyMix span + span { border-left:1px solid var(--white); }
+.mixKey { font-size:12px; color:var(--muted); }
+.mixKey i { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; }
+.mixKey b { color:var(--ink); font-weight:600; }
+''';p.write_text(s)
+p=Path('tests/atlas_browser.py');s=p.read_text().replace('        node(\'[data-history="us_sector_review"]\').click()', '''        contains(".agencyPreview", "85.8%")
+        node('.agencyPreview button').click()
+        contains(".contributorSummary", "$89,191,753.00")
+        contains(".vintageCheck", "$121,259,455.00")
+        state_agency = node('[data-contributor-actor="Department of State"]')
+        state_agency.click()
+        contains(".trendName", "Department of State")
+        node(".actorHistory summary").click()
+        contains(".actorHistory table", "$12,686,428.00")
+        year_menu = node('[data-contributor-filter=year]')
+        source_menu = node('[data-contributor-filter=source]')
+        source_menu.select_option("greenbook")
+        year_menu.select_option("2020")
+        node("[data-more-contributors]").click()
+        contains(".actorRank", "-$846,603.00")
+        source_menu.select_option("ppi")
+        contains(".contributorSummary", "1/6 amounts disclosed")
+        contains(".actorRank", "Undisclosed")
+        year_menu.select_option("2014")
+        contains(".actorRank", "Shares require a positive disclosed total")
+        node('[data-contributor-filter=scope]').select_option("all")
+        source_menu.select_option("funding_agency")
+        contains(".contributorSummary", "All atlas recipients")
+        contains(".vintageCheck", "$19,878,894,683.00")
+        pick("ATA")
+        contains("#evidence", "No contributor records")
+        pick("Honduras")
+        tab("Overview")
+        node('[data-history="us_sector_review"]').click()''')
+s=s.replace('used | {"iso"}','used | {"iso","funding_agency"}').replace('        assert any(r["unit"]', '        assert any(r["source"]=="funding_agency" for r in exported["us_contributors"]["rows"])\n        assert any(r["unit"]')
+s=s.replace('        phone.locator(\'[data-tab="Funding"]\').click()', '''        phone.locator('[data-tab="U.S. contributors"]').click()
+        expect(phone.locator(".actorRank")).to_contain_text("85.8%")
+        assert phone.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        phone.locator('[data-tab="Funding"]').click()''')
+p.write_text(s)

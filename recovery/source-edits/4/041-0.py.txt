@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,subprocess
+p=Path('data/sources.tsv')
+extra=Path('data/audit_sources.tsv').read_text().splitlines()[1:]
+rev=subprocess.check_output(['git','-C','/tmp/resolve-mcc-iati','rev-parse','HEAD'],text=True).strip()
+for key,file,title,url,source in [('mcc_calendar','mcc-calendars.csv','MCC compact quarterly status reporting calendar (2012 archive)','https://data.mcc.gov','https://raw.githubusercontent.com/openmunilabs/iati-gen/'+rev+'/data/compacts.csv'),('pacific','pacific-aid.csv.gz','Lowy Pacific Aid Map 2023 project-transaction archive','https://pacificaidmap.lowyinstitute.org/','https://raw.githubusercontent.com/raphaelmerx/pacific-aid-streamlit/c27e87f580d58831e18e0caa88a1d82f2b129435/Pacific_Aid_Map_Database.csv.gz')]:
+ extra.append('\t'.join([key,file,title,url,source,hashlib.sha256((Path('data/cache')/file).read_bytes()).hexdigest()]))
+p.write_text(p.read_text().rstrip()+'\n'+'\n'.join(extra)+'\n')

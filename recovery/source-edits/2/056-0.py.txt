@@ -1,0 +1,69 @@
+from pathlib import Path
+p=Path('tests/atlas_data.py');s=p.read_text().replace('from collections import Counter','from collections import Counter, defaultdict\nimport csv\nfrom hashlib import sha256')
+index=s.index('def main(path):')
+s=s[:index]+'''def verify_contributors(snap, countries):
+    panel = snap["contributors"]
+    manifest = list(csv.DictReader(Path("data/atlas_sources.tsv").open(), delimiter="\\t"))
+    assert [panel["source"]] == manifest
+    path = Path("data/cache") / manifest[0]["file_name"]
+    assert sha256(path.read_bytes()).hexdigest() == manifest[0]["sha256"]
+    expected = defaultdict(lambda: [0, 0, 0])
+    benchmarks = Counter()
+
+    def add(code, source, year, actor, amount):
+        for scope in (code, "ALL"):
+            cell = expected[(scope, source, year, actor)]
+            cell[2] += 1
+            if amount is not None:
+                cents = amount * 100
+                assert cents == int(cents)
+                cell[0] += int(cents)
+                cell[1] += 1
+
+    with path.open() as stream:
+        for r in csv.DictReader(stream):
+            code = "XKX" if r["Country Code"] == "CS-KM" else r["Country Code"]
+            if code in countries and r["Transaction Type Name"] == "Disbursements":
+                add(code, "funding_agency", int(r["Fiscal Year"]), r["Funding Agency Name"], Decimal(r["current_amount"]))
+    for r in query("toa_us", """
+        SELECT iso3, source_id, flow_year, actor, usd FROM toa.program p JOIN toa.finance f
+        ON p.id=f.program_id WHERE eligible_for_summary AND
+        ((source_id='us_sector_review' AND measure='disbursement')
+         OR (source_id='greenbook' AND measure='obligation' AND period_ref<>'1976 transition quarter')
+         OR (source_id='ppi' AND measure='sponsor equity commitment')
+         OR (source_id='gates' AND measure='private grant commitment'))
+    """):
+        if r["source_id"] == "us_sector_review":
+            for scope in (r["iso3"], "ALL"):
+                benchmarks[scope, r["flow_year"]] += int(r["usd"] * 100)
+        else:
+            add(r["iso3"], r["source_id"], r["flow_year"], r["actor"] or "Unspecified contributor", r["usd"])
+
+    assert set(panel["scopes"]) == set(countries) | {"ALL"}
+    for scope, blob in panel["scopes"].items():
+        data = parse(zlib.decompress(base64.b64decode(blob), wbits=47))
+        for r in data["rows"]:
+            key = scope, r["source"], r["year"], r["actor"]
+            amount, known, count = expected.pop(key)
+            assert (r["cents"], r["known"], r["records"]) == (amount if known else None, known, count), key
+        for b in data["benchmark"]:
+            assert b["total_cents"] == benchmarks.pop((scope, b["year"]))
+    assert not expected and not benchmarks
+    print("Every contributor amount, disclosure count and comparison total matches its source for all 250 recipients and the combined scope.")
+
+
+'''+s[index:]
+s=s.replace('    sources = {s["source_id"]', '    verify_contributors(snap, countries)\n    sources = {s["source_id"]')
+p.write_text(s)
+p=Path('README.md');s=p.read_text();a=s.index('To rebuild the HTML');s=s[:a]+'''Open **U.S. contributors** for a ranked dollar and share breakdown and a selected contributor’s annual history. Choose one country or all 250 atlas recipients, a fiscal or calendar year, and a measure. The federal payment view uses funding-agency and account records from ForeignAssistance.gov. Its comparison shows the atlas sector-file total for the same selection. Each archive has its own release vintage. The historical economic obligation, infrastructure sponsor equity and reviewed foundation grant views each use their own disclosed subtotal. Unknown sponsor equity, signed adjustments and missing years are visible. Country JSON downloads include these chart values in integer cents and the supplementary agency source. The full build of the atlas fetches this [checksum-pinned funding file](data/atlas_sources.tsv).
+
+'''+s[a:];p.write_text(s)
+p=Path('Open-Source Adoptions.md');s=p.read_text();s+='''
+
+## U.S. contributor visualizations
+
+| Source or tool compared | Advantage | Limitation | Selection |
+|---|---|---|---|
+| ForeignAssistance.gov funding-agency summary, archived raw CSV | Identifies funding agencies and accounts for disbursements by recipient and fiscal year. | The funding and sector files come from different snapshots. | Use within-file funding shares and show the sector total alongside. The [atlas manifest](data/atlas_sources.tsv) pins the input. |
+| Existing Greenbook, PPI and Gates records | Identify government agencies, named infrastructure sponsors and a private foundation. | Economic obligations, disclosed sponsor equity and reviewed grant commitments have different scopes. | Show each as a selectable measure with its own denominator. Reuse the atlas’s offline renderer and R aggregation. |
+''';p.write_text(s)

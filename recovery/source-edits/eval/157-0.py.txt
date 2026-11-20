@@ -1,0 +1,29 @@
+from pathlib import Path
+p=Path('R/evaluation_review.R')
+s=p.read_text().replace('searches <- fread(files[4],colClasses=list(character=c("iso3","project_key","source_id","leads")))','searches <- as.data.table(read.delim(files[4],colClasses=c("character","character","character","integer","character"),\n                                        na.strings=character(),check.names=FALSE))\n  stopifnot(all(vapply(unique(searches$leads),jsonlite::validate,logical(1))))').replace('  p[reviews[has_lead==1]', '  p[reviews[has_lead==0],on=.(iso3,project_key),status:="No qualifying evaluation found in the sources searched"]\n  p[reviews[has_lead==1]');p.write_text(s)
+p=Path('scripts/search_evaluations.py');p.write_text(p.read_text().replace("key=lambda k:(-candidates[k][0],k))[:4]","key=lambda k:(-candidates[k][0],k))"))
+p=Path('atlas/evaluations.js');p.write_text(p.read_text().replace('Up to four candidate titles per archive are shown. Matching text can refer','Candidate titles include text matches. A match can refer'))
+# Show program screening decisions and sources for genuinely related historical reports.
+p=Path('/tmp/curate-toa-evaluations.py');s=p.read_text();i=s.index("write('evaluation_reports.tsv'")
+s=s[:i]+'''report('6163','BEN','mcc:BEN:ACCESSLAND','Markus Goldstein and colleagues','3ie lists World Bank, Belgian, French and UN research funding. Direct commissioning by the Beninese government or MCC was unverified.',
+'Village-level land demarcation within the Plan Foncier Rural.','The authors examined treated parcels after boundary demarcation and before the completion of certification.',
+'Randomized comparison of villages offered land demarcation.','Treated parcels saw a shift toward longer-term investment. The study found no accompanying increase in agricultural productivity at this early follow-up.',
+'The paper reports an early stage in land formalization. It cannot establish the long-term productivity effect of receiving a certificate.',
+'3ie record 6163, program identity, research funders and evaluators’ abstract.',False)
+finding('6163','After boundary demarcation','Long-term investment on treated parcels','Higher',None,None,'The authors observed a shift toward long-term investment.')
+finding('6163','After boundary demarcation','Agricultural productivity','No detectable change',None,None,'The authors reported no gain in productivity at this early follow-up.')
+note('SLE','dfc:9000023375','USAID record PD-ACJ-536 describes a midterm review of an IRC child-survival grant. The DFC record describes broader humanitarian activities. Exact financing and post-completion timing were unverified.',False)
+for key in ('dfc:9000105261','dfc:9000105263'):
+ note('ZWE',key,'USAID’s February 1988 Zimbabwe Low-Cost Shelter Program final evaluation (XD-AAY-782-A, pp. 4–5) describes two $25 million loan guarantees. Construction was still under way at several sites. The DFC legacy entry has no original loan date or USAID identifier to confirm a match.')
+note('MNG','mcc:MNG:VOC EDU','AEA trials 155 and 637 registered studies of equipment upgrades and vocational school admission. The archived records list planned outcomes and no resulting paper. A separate short-course trial does not establish the effects of these investments.')
+note('BFA','gates-INV-029460','AEA trial 834 concerns urban sanitation tariffs in Burkina Faso. The record describes a research plan and does not establish the results of this grant to the national water office.')
+note('GEO','mcc:GEO:RGL INF','The 2004 Georgian infrastructure paper (3ie 5888) predates the MCC investment.',False)
+note('MLI','mcc:MLI:ALATNA IRR','3ie 20813 studies a national agricultural input-credit policy. The record does not evaluate the Alatona irrigation investment.',False)
+note('BLZ','dfc:9000104526','IEG record P131408 reviews the Marine Conservation and Climate Adaptation project. The record identifies a World Bank operation and does not verify a final evaluation of the DFC blue-bond transaction.',False)
+note('PHL','mcc:PHL:ROADS PJT','USAID record PN-AAJ-607 concerns an earlier rural roads program. It predates the Samar road intervention.',False)
+note('SLV','mcc:SLV:HMN DEVEL','USAID record PD-ABM-647 evaluates the 1988–1996 rural electrification project. Its reported results belong to an earlier intervention than the MCC compact.',False)
+note('BFA','mcc:BFA:ROADS PJT','The USAID Eastern ORD rural roads evaluation concerns a different road investment and predates the compact.',False)
+note('NER','gates-INV-010092','The trial plans and the indexed community-wide treatment study cover other interventions. They do not assess ANIMAS-Sutura contraceptive distribution under this grant.',False)
+note('MEX','exim:MEX:AP084134XX','The GAO offshore reports cover U.S. Interior Department oversight. They do not evaluate this Mexican petroleum financing deal.',False)
+note('MEX','exim:MEX:AP086924XX','The GAO offshore reports cover U.S. Interior Department oversight. They do not evaluate this Mexican petroleum financing deal.',False)
+''' +s[i:];p.write_text(s)

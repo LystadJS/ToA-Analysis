@@ -1,0 +1,13 @@
+import csv, hashlib, subprocess, shutil, urllib.parse,pathlib
+P=pathlib.Path
+items=[('mcc_project_costs','mcc-project-finance.csv','MCC compact project financial transactions, FY2004–FY2013 archive','https://data.mcc.gov/raw/finance/finance.csv','/tmp/resolve-mcc-iati','openmunilabs/iati-gen','data/finance.csv'),
+ ('threeie','3ie-evaluations.zip','3ie Development Evidence Portal, June 2023 archive','https://developmentevidence.3ieimpact.org/','/tmp/ev-ravivanpong','ravivanpong/LearningFrom3ie','data/3ieAllDataCommaSV.zip'),
+ ('usaid_dec','usaid-evaluation-catalog.tsv','USAID Development Experience Clearinghouse final and special evaluation archive, September 2014','https://dec.usaid.gov/','/tmp/ev-albert-decatur','albert-decatur/get-usaid-evals','output/evals_2014-09-29.csv'),
+ ('ieg','ieg-completion-reviews.csv','World Bank IEG completion review and performance assessment index, June 2026','https://ieg.worldbankgroup.org/data','/tmp/ev3-euihyunb--World-Bank-Group-MIGA-Development-Effectiveness-','euihyunb/World-Bank-Group-MIGA-Development-Effectiveness-','01_WB_porject_ratings/data/IEG_ICRR-PPAR_Ratings_2026-06-24(Data).csv'),
+ ('mcc_catalog','mcc-catalog.json','MCC open data catalog and evaluation study records, historical archive','https://data.mcc.gov/','/tmp/ev2-openmunilabs','openmunilabs/data-mcc-gov','web/data.json')]
+with open('data/evaluation_sources.tsv','w') as f:
+ w=csv.writer(f,delimiter='\t',lineterminator='\n');w.writerow('source_id file_name title publisher_url download_url sha256'.split())
+ for key,file,title,pub,repo,slug,rel in items:
+  fsrc=P(repo)/rel;dest=P('data/cache')/file;shutil.copyfile(fsrc,dest)
+  rev=subprocess.check_output(['git','-C',repo,'rev-parse','HEAD'],text=True).strip()
+  w.writerow((key,file,title,pub,'https://raw.githubusercontent.com/'+slug+'/'+rev+'/'+urllib.parse.quote(rel),hashlib.sha256(dest.read_bytes()).hexdigest()))

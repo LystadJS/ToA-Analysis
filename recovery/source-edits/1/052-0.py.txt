@@ -1,0 +1,6 @@
+from pathlib import Path
+p=Path('atlas/app.js')
+s=p.read_text().replace("  .attr('font-family', 'var(--mono)')\n","").replace("  mapLabel.text(c.name.length > 30 ? c.iso3 : c.name);","  const useCode = c.name.length > 30;\n  mapLabel.attr('font-family', useCode ? 'var(--mono)' : 'var(--sans)')\n    .text(useCode ? c.iso3 : c.name);").replace("choose('HND');","choose('HND');\n// Re-measure the label after the embedded faces replace the browser's first-paint fonts.\ndocument.fonts.ready.then(() => mark(countries.get(state.code)));")
+p.write_text(s)
+p=Path('README.md')
+p.write_text(p.read_text().replace('Font files and licenses are in [assets/fonts](assets/fonts).','After generating the full release, run `python tests/print_figures.py` to verify PDF typography, coverage and empty panels. Font files and licenses are in [assets/fonts](assets/fonts).'))

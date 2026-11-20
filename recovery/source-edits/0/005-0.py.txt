@@ -1,0 +1,20 @@
+import requests,concurrent.futures
+urls={
+'fta':'https://ustr.gov/trade-agreements/free-trade-agreements',
+'tifa':'https://ustr.gov/trade-agreements/trade-investment-framework-agreements',
+'exim':'https://www.exim.gov/open-government-data',
+'exim2':'https://catalog.data.gov/api/3/action/package_search?q=EXIM%20authorizations',
+'exim3':'https://data.exim.gov/',
+'exim4':'https://data.exim.gov/resource/yg9f-7v9x.json?$limit=1',
+'census':'https://www.census.gov/foreign-trade/balance/c2150.html',
+'censuslist':'https://www.census.gov/foreign-trade/balance/index.html',
+'censusapi':'https://api.census.gov/data/timeseries/intltrade/exports/hs?get=CTY_CODE,CTY_NAME,ALL_VAL_YR&time=2024-12&I_COMMODITY=TOTAL',
+'mcc':'https://www.mcc.gov/where-we-work/',
+'github':'https://api.github.com/search/repositories?q=EXIM+authorizations',
+'wits':'https://wits.worldbank.org/CountryProfile/en/Country/USA/Year/2023/TradeFlow/EXPIMP/Partner/by-country'}
+def run(item):
+ k,u=item
+ try:
+  r=requests.get(u,timeout=16);open('/tmp/rel-src-'+k,'wb').write(r.content); print(k,r.status_code,len(r.content),r.url[:110],r.text[:65].replace('\n',' '),flush=True)
+ except Exception as e:print(k,str(e)[:180],flush=True)
+with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:list(ex.map(run,urls.items()))

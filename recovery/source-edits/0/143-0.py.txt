@@ -1,0 +1,5 @@
+from pathlib import Path
+p=Path('README.md');s=p.read_text().replace('the seven evidence tables','all ten base tables')
+s=s.replace('Negative adjustments and missing years stay visible.', 'Negative adjustments and missing years stay visible. The leading-three option ranks organizations by the sum of their absolute annual amounts across the displayed history.')
+s=s.replace('The treaty inventory is selective.', 'In this release, 23 jurisdictions have a numeric U.S.-linked outcome or output under these criteria, including 15 with undated monitoring only. The treaty inventory is selective.')
+p.write_text(s)

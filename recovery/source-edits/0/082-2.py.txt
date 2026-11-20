@@ -1,0 +1,3 @@
+from pathlib import Path
+for file,anchor,line in [('scripts/build.sh','Rscript tests/verify.R','Rscript tests/relationships.R'),('tests/restore.sh','TOA_TEST_US="${scratch[0]}" TOA_TEST_CHINA="${scratch[1]}" Rscript tests/verify.R','TOA_TEST_US="${scratch[0]}" Rscript tests/relationships.R')]:
+ p=Path(file);p.write_text(p.read_text().replace(anchor+'\n',anchor+'\n'+line+'\n'))

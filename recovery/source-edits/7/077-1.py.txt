@@ -1,0 +1,10 @@
+from pathlib import Path
+p=Path('README.md');s=p.read_text();key='## Build and use'
+entry='''## Audit completeness by country and year
+
+Read the [coverage findings](docs/Coverage.md) for the reconciliations against U.S. government disbursement files, the USAID Greenbook and Kenya’s national debt register. With both databases populated, run `scripts/audit-coverage.sh` from the repository root. The audit uses R, `pdftotext` from Poppler and the [pinned report sources](data/audit_sources.tsv). The prepared cloud environment includes these tools.
+
+Open `artifacts/coverage/Trade-over-Aid-coverage.html` for the offline heatmap or `artifacts/coverage/Country-year-coverage.pdf` for a printable comparison across all 250 jurisdictions. The same directory contains country-year observations and reconciliation CSVs, including amounts outside the current country registry. The audit reads the two databases and writes its own outputs. Run `Rscript tests/coverage_data.R` after sourcing `scripts/start-postgres.sh`, and use Python with Playwright and Chromium for `python tests/coverage_browser.py`.
+
+'''
+p.write_text(s.replace(key,entry+key))
