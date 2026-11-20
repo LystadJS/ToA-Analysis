@@ -1,0 +1,2 @@
+# Keep the bundled licenses byte-for-byte as distributed with the fonts.
+assets/fonts/*-OFL.txt -whitespace
