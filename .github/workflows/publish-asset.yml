@@ -1,0 +1,25 @@
+name: Upload verified evaluation archive
+on:
+  push:
+    branches: [codex/publish-evaluation-5090595]
+permissions:
+  contents: write
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify transfer and upload to the evaluation release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo=LystadJS/ToA-Analysis
+          transfer=9ad31dc46f6bbd49297fdc48ab5b243362ea7da6
+          asset=Trade-over-Aid-release.zip
+          checksum=537f8879a852c0a8e9ea6727032bea3a0b24f445fc49ef141174cf0e9229de56
+          curl --fail --location --retry 3 -o "$asset" "https://raw.githubusercontent.com/$repo/$transfer/$asset"
+          echo "$checksum  $asset" | sha256sum --check
+          unzip -tq "$asset"
+          gh api "repos/$repo/releases/453185225" | jq -e '.draft == true and .tag_name == "evaluation-5090595" and .target_commitish == "509059593167fcdabde823e0ead4074eae00ebda" and (.assets|length) == 0'
+          gh release upload evaluation-5090595 "$asset" --repo "$repo"
