@@ -1,0 +1,24 @@
+
+.countryProfile { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:15px; }
+.countryProfile p, .countryProfile li { margin:7px 0; }
+.countryProfile ul { margin:8px 0; padding-left:18px; }
+.countryProfile details,.orgTimeline details { margin:12px 0 6px; }
+.countryProfile summary,.orgTimeline summary { color:#225e60; cursor:pointer; }
+.countryProfile .tablewrap,.orgTimeline .tablewrap { max-height:320px; overflow:auto; margin-top:7px; }
+.countryProfile td,.countryProfile th,.orgTimeline td,.orgTimeline th { padding:6px 8px; }
+.orgTimeline { margin-bottom:15px; }
+.timelineHead { display:flex; gap:16px; justify-content:space-between; align-items:start; }
+.timelineHead label { display:grid; font-size:12px; color:var(--muted); }
+.timelineHead select { font-family:var(--sans); padding:5px; max-width:min(285px,100%); }
+.orgTimeline svg { width:100%; max-height:290px; display:block; }
+.orgTimeline svg text,.orgTimeline td { font-family:var(--mono); font-size:11px; }
+.orgTimeline svg text { fill:var(--muted); }
+.orgTimeline td small { display:block; }
+.timelineKey { display:flex; flex-wrap:wrap; gap:4px 15px; max-height:120px; overflow:auto; font-size:12px; }
+.timelineKey i { display:inline-block; width:13px; height:3px; margin-right:5px; vertical-align:middle; }
+@media (max-width:750px) {
+  .countryProfile { grid-template-columns:1fr; }
+  .timelineHead { display:grid; }
+  .timelineHead select { min-width:0; }
+  .orgTimeline svg text {font-size:14px;}
+}

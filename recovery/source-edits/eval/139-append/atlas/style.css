@@ -1,0 +1,49 @@
+
+.evaluationReview {margin:0 0 2.5rem}
+.evalHead {display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap}
+.evalPicker {font: .85rem var(--sans);color:var(--muted);display:grid;gap:.35rem}
+.evalPicker select {max-width:100%;width:16rem;padding:.45rem;border:1px solid var(--line);border-radius:.35rem;background:var(--white)}
+.evalCount {padding:.65rem .85rem;border-inline-start:3px solid var(--us);background:#f0f5f3}
+.evalProgram {margin:0;border-top:1px solid var(--line);background:var(--white)}
+.evalProgram > summary {list-style:none;display:grid;grid-template-columns:1.7rem 1fr auto;gap:.65rem;padding:.85rem .6rem;cursor:pointer;align-items:start}
+.evalProgram > summary::-webkit-details-marker {display:none}
+.evalNumber,.evalMoney,.evalPlotRow b,.evalPlotTicks {font-family:var(--mono);font-variant-numeric:tabular-nums}
+.evalNumber {color:var(--muted);font-size:.84rem;padding-top:.17rem}
+.evalNumber:after {content:' ›'}
+.evalProgram[open] .evalNumber:after {content:' ⌄'}
+.evalMoney {white-space:nowrap;font-size:.85rem;padding-top:.17rem}
+.evalIdentity {display:grid;gap:.14rem;overflow-wrap:anywhere}
+.evalIdentity strong {font:600 1.06rem var(--sans)}
+.evalIdentity small,.evalBasis,.evalCaveat,.evalKicker,.evalPlotTicks {color:var(--muted)}
+.evalStatus {font-size:.86rem}
+.evalStatus.verified {color:#1d6155;font-weight:bold}
+.evalBody {padding:0 .9rem 1.05rem 2.95rem}
+.evalBasis,.evalKicker,.evalLinks,.evalCaveat {font-size:.87rem}
+.evalReport {margin:1rem 0;border-top:1px solid var(--line);padding-top:.8rem}
+.evalReport h4 {font:500 1.55rem/1.17 var(--serif);margin:.3rem 0 .55rem}
+.evalFigure {margin:1rem 0 1.4rem;max-width:48rem}
+.evalFigure figcaption {font:600 1rem var(--sans);margin-bottom:.6rem}
+.evalFigure small {display:block;font:normal .83rem var(--sans);color:var(--muted)}
+.evalPlotRow {display:grid;grid-template-columns:minmax(7rem,36%) 1fr 3rem;align-items:center;gap:.4rem;font-size:.91rem}
+.evalPlotRow svg {display:block;width:100%;height:1.8rem}
+.evalLine {stroke:var(--us);stroke-width:1.7}
+.evalMark,.evalDot {fill:var(--us);background:var(--us)}
+.evalPlotTicks {display:flex;justify-content:space-between;margin-left:calc(36% + .5rem);margin-right:3.3rem;font-size:.73rem}
+.evalMatrix {width:100%;table-layout:fixed;border-collapse:collapse;font-size:.9rem}
+.evalMatrix th,.evalMatrix td {text-align:center;white-space:normal;padding:.4rem .25rem;border:0;border-bottom:1px solid var(--plot-grid)}
+.evalMatrix th:first-child {width:41%;text-align:left}
+.evalMatrix tbody th {font-weight:400}
+.evalDot {display:inline-block;width:.68rem;height:.68rem;border-radius:50%}
+.evalSr {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.evalMethods {margin:.7rem 0;color:var(--muted);font-size:.9rem}
+.evalMethods summary {cursor:pointer;color:var(--ink)}
+.evalMethods dl {display:grid;grid-template-columns:minmax(5rem,8rem) 1fr;gap:.35rem .8rem}
+.evalMethods dt {font-weight:bold}.evalMethods dd {margin:0}
+.evalLinks {display:flex;gap:1rem;flex-wrap:wrap}
+.evalScope {border-block:1px solid var(--line);padding:.7rem .2rem}
+@media(max-width:600px) {
+ .evalProgram > summary {grid-template-columns:1.25rem 1fr}
+ .evalMoney {grid-column:2}.evalBody {padding-left:.6rem}
+ .evalMatrix {font-size:.8rem}.evalPlotRow {grid-template-columns:37% 1fr 2.8rem}
+ .evalHead,.evalPicker {width:100%}
+}
