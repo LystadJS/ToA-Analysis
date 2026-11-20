@@ -96,26 +96,9 @@ const js = await build({
   target: 'es2020',
   legalComments: 'inline',
 });
-const fonts = [];
-for (const [family, pkg, weight] of [
-  ['DM Sans', 'dm-sans', 400],
-  ['DM Sans', 'dm-sans', 600],
-  ['Instrument Serif', 'instrument-serif', 400],
-]) {
-  const data = await readFile(
-    path.join(
-      here,
-      `node_modules/@fontsource/${pkg}/files/${pkg}-latin-${weight}-normal.woff2`,
-    ),
-  );
-  fonts.push(
-    `@font-face{font-family:"${family}";font-weight:${weight};font-display:swap;src:url(data:font/woff2;base64,${data.toString('base64')}) format("woff2")}`,
-  );
-}
+const fonts = await readFile(path.join(cache, 'fonts.css'), 'utf8');
 const licenses = [];
 for (const pkg of [
-  '@fontsource/dm-sans',
-  '@fontsource/instrument-serif',
   'd3-geo',
   'd3-zoom',
   'd3-selection',
@@ -139,7 +122,7 @@ for (const pkg of [
 const stylesheet = await readFile(path.join(here, 'style.css'), 'utf8');
 const template = await readFile(path.join(here, 'index.html'), 'utf8');
 const html = template
-  .replace('/* ATLAS_CSS */', () => fonts.join('\n') + '\n' + stylesheet)
+  .replace('/* ATLAS_CSS */', () => fonts + '\n' + stylesheet)
   .replace('ATLAS_SNAPSHOT', () =>
     JSON.stringify(snapshot).replace(/</g, '\\u003c'),
   )

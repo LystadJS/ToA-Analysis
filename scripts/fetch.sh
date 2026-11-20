@@ -12,6 +12,7 @@ while IFS=$'\t' read -r id name title publisher url digest; do
     echo "$digest  $tmp/$name" | sha256sum --check --status
     mv "$tmp/$name" "$path"
   fi
-done < data/sources.tsv
+done < "${1:-data/sources.tsv}"
+if [[ $# -gt 0 ]]; then exit 0; fi
 "${TOA_PYTHON:-python}" scripts/read_mcc.py data/cache/mcc.pbix "$tmp/mcc.csv"
 mv "$tmp/mcc.csv" data/cache/mcc.csv

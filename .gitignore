@@ -4,3 +4,4 @@ artifacts/
 .Rhistory
 .Rproj.user/
 atlas/node_modules/
+__pycache__/

@@ -1,0 +1,4 @@
+source_id	file_name	title	publisher_url	download_url	sha256
+usun_toa	usun_roster.tsv	USUN Trade over Aid roster, user-supplied transcription, 19 November 2026	https://usun.usmission.gov/trade-over-aid/	https://usun.usmission.gov/trade-over-aid/	2511d754eced384159b418d68a0eb57f772c87f695d6ef7272074b5c5ba360dc
+ustr_fta	us_fta_partners.tsv	U.S. comprehensive free trade agreement partners, through 2025	https://ustr.gov/trade-agreements/free-trade-agreements	https://ustr.gov/trade-agreements/free-trade-agreements	b1fff88217b3ec80a4ea944b2fd7320a329ffecc141412abb7dd4976e84544ba
+cofa	us_free_association.tsv	U.S. Compacts of Free Association with three sovereign Pacific partners	https://www.doi.gov/oia/compacts-of-free-association	https://github.com/unitedstates/python-us/blob/e866affd160aedd6539f0ccd06a5ed2ec52b5cb2/README.md#states	3f6f0d4e5d5685403788eb4bf4bbf193b61d56d77778b5a6158df4120d628d13

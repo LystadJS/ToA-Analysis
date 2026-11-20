@@ -9,10 +9,10 @@ country_data <- function(db, iso) {
                 JOIN toa.source s USING(source_id) WHERE iso3=$1 ORDER BY year DESC NULLS LAST,id"),
     finance=q("SELECT p.iso3,p.id,p.name,p.actor,p.channel,p.source_id,p.status,p.locator,
                 f.measure,f.instrument,f.flow_year,f.period_ref,f.usd,f.eligible_for_summary,
-                f.amount_estimated,p.project_investment_usd,p.citation,s.download_url AS archive
+                f.amount_estimated,f.reported_currency,f.reported_amount,f.period_start,f.period_end,p.sponsor_ownership_pct,p.implied_sole_sponsor_equity_usd,p.project_investment_usd,p.citation,s.download_url AS archive
                 FROM toa.program p JOIN toa.finance f ON p.id=f.program_id JOIN toa.source s USING(source_id)
                 WHERE p.iso3=$1 ORDER BY f.flow_year DESC NULLS LAST,p.id,f.measure,f.period_ref"),
-    results=q("SELECT p.name,p.source_id,p.locator,p.citation,s.download_url AS archive,r.*,
+    results=q("SELECT p.name,p.source_id,p.locator,p.citation,s.download_url AS archive,(SELECT t.download_url FROM toa.source t WHERE t.source_id=r.timing_source_id) AS timing_archive,r.*,
                CASE WHEN r.baseline IS NOT NULL AND coalesce(r.comparator,'=')='='
                     THEN r.actual-r.baseline END AS change_from_baseline
                FROM toa.result r JOIN toa.program p ON p.id=r.program_id JOIN toa.source s USING(source_id)
@@ -33,7 +33,7 @@ series_for <- function(us, china) {
   # Keep the transition quarter in finance.csv and omit it from the annual chart.
   g <- us$finance[period_ref!="1976 transition quarter"]
   rbindlist(list(annual(g,"greenbook","U.S. economic assistance obligations"),
-                 annual(us$finance,"fa","U.S. all-sector disbursements"),
+                 annual(us$finance,"us_sector_review","U.S. all-sector disbursements"),
                  annual(china$finance[measure=="adjusted commitment"],"gcdf","PRC adjusted official commitments"),
                  annual(china$finance[measure=="face-value commitment (CLG)"],"clg","PRC CLG face-value commitments")))
 }

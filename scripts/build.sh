@@ -5,12 +5,18 @@ mkdir -p .toa
 exec 9>.toa/build.lock
 flock 9
 scripts/fetch.sh
-source scripts/start-postgres.sh
+scripts/fetch.sh data/atlas_sources.tsv
+scripts/fetch.sh data/relationship_sources.tsv
+scripts/fetch.sh data/evaluation_sources.tsv
+source scripts/start-postgres.sh 9>&-
 Rscript R/build.R
 Rscript tests/verify.R
+Rscript tests/relationships.R
+Rscript tests/evaluations.R
 mkdir -p artifacts
 for db in toa_us toa_china; do
   pg_dump -Fc --no-owner --no-privileges -d "$db" -f "artifacts/$db.dump.tmp"
   mv "artifacts/$db.dump.tmp" "artifacts/$db.dump"
 done
 (cd artifacts && sha256sum toa_us.dump toa_china.dump > SHA256SUMS)
+Rscript R/mirror_sqlite.R

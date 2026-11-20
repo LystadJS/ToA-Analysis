@@ -1,30 +1,40 @@
+source("R/plot_theme.R")
+
 plot_country <- function(series, context, name, path) {
-  grDevices::pdf(path,width=10,height=10,useDingbats=FALSE)
-  on.exit(dev.off())
-  layout(matrix(c(1,2,3,4,5,5),3,2,byrow=TRUE))
-  par(mar=c(4,4.6,2.6,1),oma=c(2.4,0,3,0),las=1)
+  grDevices::cairo_pdf(path,width=10.8,height=10)
+  on.exit(grDevices::dev.off())
   blank <- function(title) {
-    plot.new()
-    title(main=title,cex.main=0.93)
-    text(.5,.5,"No observation in these releases",col="grey40")
+    ggplot() + annotate("text",x=0,y=0,label="No observation in these releases",
+                        family=toa_fonts[["body"]],colour="#536165",size=3.4) +
+      scale_x_continuous(breaks=NULL) + scale_y_continuous(breaks=NULL) +
+      labs(title=title,x=NULL,y=NULL) + toa_theme()
   }
-  labels <- c("U.S. economic assistance obligations","U.S. all-sector disbursements","PRC adjusted official commitments","PRC CLG face-value commitments")
-  for (i in seq_along(labels)) {
+  labels <- c("U.S. economic assistance obligations","U.S. all-sector disbursements",
+              "PRC adjusted official commitments","PRC CLG face-value commitments")
+  colours <- c("#2a7771","#2a7771","#a55732","#a55732")
+  panels <- lapply(seq_along(labels),function(i) {
     d <- series[series==labels[i] & !is.na(value)][order(year)]
-    if (!nrow(d)) { blank(labels[i]); next }
-    plot(d$year,d$value/1e6,pch=16,col=c("#205889","#307663","#9D4736","#86538F")[i],
-         xlab=if (i>=3) "Calendar year" else "Fiscal year",ylab="Current USD, millions",
-         main=labels[i],cex.main=.93,cex=.7)
-    abline(h=0,col="grey75",lty=3)
-  }
+    if (!nrow(d)) return(blank(labels[i]))
+    ggplot(d,aes(year,value/1e6)) +
+      geom_hline(yintercept=0,colour="#c4cacc",linewidth=.35) +
+      geom_point(colour=colours[i],size=1.75) +
+      scale_x_continuous(breaks=function(limits) { ticks <- pretty(limits,5); ticks[ticks==round(ticks)] },labels=scales::label_number(accuracy=1,big.mark="")) +
+      labs(title=labels[i], x=if(i>=3) "Calendar year" else "Fiscal year",y="Current USD, millions") +
+      toa_theme()
+  })
+  logistics <- blank("National logistics lead time")
   if (nrow(context)) {
-    plot(days~year,data=context,type="n",xlab="Survey year",ylab="Median days",
-         main="National logistics lead time",cex.main=.93)
-    points(days~year,data=context[source_id=="import"],pch=16,col="#205889")
-    points(days~year,data=context[source_id=="export"],pch=4,col="#9D4736")
-    legend("topright",legend=c("Import","Export"),pch=c(16,4),col=c("#205889","#9D4736"),bty="n",cex=.8)
-  } else blank("National logistics lead time")
-  mtext(name,outer=TRUE,side=3,font=2,cex=1.2)
-  mtext("Each panel uses its own scale. Points show available years. Finance panels sum disclosed amounts only.",
-        outer=TRUE,side=1,cex=.8)
+    logistics <- ggplot(context,aes(year,days,colour=source_id,shape=source_id)) +
+      geom_point(size=2.5) +
+      scale_colour_manual(values=c(import="#2a7771",export="#a55732"),breaks=c("import","export"),labels=c("Import","Export")) +
+      scale_shape_manual(values=c(import=16,export=4),breaks=c("import","export"),labels=c("Import","Export")) +
+      scale_x_continuous(breaks=sort(unique(context$year))) +
+      labs(title="National logistics lead time",x="Survey year",y="Median days") + toa_theme()
+  }
+  panels[[5]] <- logistics
+  page <- patchwork::wrap_plots(panels,design="AB\nCD\nEE") +
+    patchwork::plot_annotation(title=name,
+      caption="Each panel uses its own scale. Points show observed years. Finance panels sum disclosed amounts only.",
+      theme=toa_theme(14) + theme(plot.caption=element_text(family=toa_fonts[["number"]],size=8)))
+  print(page)
 }
