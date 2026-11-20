@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Country and year coverage · Trade over Aid</title>
+<style>
+/* TOA_FONTS */
+:root{--navy:#14353d;--ink:#15363a;--muted:#506568;--paper:#fafbf9;--light:#fff;--line:#cbd6ce;--teal:#26766d}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.48 var(--sans)}
+header{background:var(--navy);color:#f5f6ee;padding:12px max(4vw,calc((100% - 1460px)/2));display:flex;align-items:center;justify-content:space-between}
+header b{font:24px var(--serif)}header a{color:#e6efe5;font-size:13px}main{width:min(92%,1460px);margin:auto}a{color:#175e59;text-underline-offset:3px}
+h1,h2,h3,p{margin:0}h1,h2,h3{font-family:var(--serif);font-weight:400;line-height:1.12}h1{font-size:clamp(33px,4vw,57px);letter-spacing:-.045em;margin:27px 0 7px}h2{font-size:27px}h3{font-size:21px}
+.intro,.note,.detail p,small{color:var(--muted)}.intro{margin-bottom:22px}.note,small{font-size:13px}.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line)}
+button,select,input{font:inherit;color:inherit}button,select{cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #9b611b;outline-offset:2px}
+.tabs button{background:transparent;border:0;border-bottom:3px solid transparent;font-size:15px;padding:9px 14px}.tabs button[aria-pressed=true]{border-color:var(--teal);font-weight:650}
+.filters{display:flex;gap:10px 15px;flex-wrap:wrap;align-items:end;margin:16px 0}.filters label{font-size:12px;font-weight:620;display:grid;gap:3px}.filters input,.filters select,.action{border:1px solid #b7c7bd;border-radius:4px;min-height:33px;background:var(--light);padding:4px 8px;font-size:13px}
+.filters input{width:180px}.filters .wide{max-width:280px}.filters [hidden]{display:none}.wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,285px);gap:15px;align-items:start}
+.card,.detail,.report{background:var(--light);border:1px solid var(--line);border-radius:7px;min-width:0;padding:16px}.card{border:0;border-radius:0}.cardtitle{display:flex;align-items:center;justify-content:space-between;gap:10px}.legend{display:flex;flex-wrap:wrap;gap:5px 13px;margin:12px 0;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:5px}.legend i,.swatch{width:13px;height:13px;display:inline-block;border:0}
+.scroller{max-width:100%;overflow:auto}.matrix{border-spacing:2px;width:100%;font-variant-numeric:tabular-nums}.matrix th{font-size:12px;text-align:center;font-weight:550;min-width:32px}.matrix th:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--light);width:155px;min-width:110px;line-height:1.18;padding:3px 8px 3px 0}
+.matrix thead th{color:var(--muted);padding-bottom:5px}.matrix td{padding:0}.cell{border:0;border-radius:0;width:100%;min-width:23px;height:24px;display:block;padding:0}.cell:hover,.cell[aria-pressed=true]{outline:2px solid var(--navy);outline-offset:-2px}
+.agree,.complete{background:#438979}.higher,.partial{background:#edb768}.lower{background:#8fa9cb}.new,.missing{background:#ae664a}.old{background:#ab91b1}.empty{background:#e6e9e1}.outside{background:repeating-linear-gradient(135deg,#fbfbf5,#fbfbf5 3px,#d2d7d0 3px,#d2d7d0 4px)}.present{background:#72a7a1}
+.pager{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:11px}.pager small{margin-right:auto}button:disabled{opacity:.45;cursor:default}.detail{border-top:4px solid var(--teal)}.detail h2{font-size:23px}.detail h3{margin:6px 0}.detail p{font-size:13px;margin:8px 0}
+dl{margin:12px 0;display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:13px}dd{font-variant-numeric:tabular-nums;margin:0;text-align:right;font-weight:620}.detail dt{color:var(--muted)}
+.report{margin:22px 0}.report h3{margin-top:20px}.report p,.report ol{max-width:95ch;margin:7px 0}.report li{margin:7px 0}.evidence{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}.evidence td,.evidence th{border-bottom:1px solid var(--line);text-align:left;padding:8px}.evidence th{color:var(--muted);font-size:12px}.evidence .val{text-align:right;white-space:nowrap}summary{cursor:pointer;font-weight:600}details{border-top:1px solid var(--line);margin-top:15px;padding-top:9px}.more{padding:10px 0 25px}.status{display:inline-flex;align-items:center;gap:6px}.sr{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.detail{width:100%}.detail dl{max-width:500px}.detail{scroll-margin-top:8px}}
+@media(max-width:580px){main{width:95%}.card,.detail,.report{padding:10px}.tabs button{font-size:13px;padding:8px}.filters{gap:8px}.filters input{width:145px}.filters .wide{max-width:225px}.matrix th:first-child{min-width:97px}.cardtitle{flex-wrap:wrap}.cardtitle h2{font-size:23px}}
+</style>
+</head>
+<body>
+<header><b>Trade over Aid</b><a href="#evidence">National reports and findings</a></header>
+<main>
+<h1>Country and year coverage</h1>
+<p class="intro">Find differences in reported spending, undisclosed amounts and results that cannot yet be dated.</p>
+<nav class="tabs" aria-label="Audit view"><button id="compare" aria-pressed="true">U.S. spending cross-check</button><button id="observe" aria-pressed="false">Coverage by source</button></nav>
+<div class="filters">
+<label id="donorField" hidden>Provider<select id="donor"><option value="CHN">China</option><option value="USA">United States</option><option value="Shared">Shared trade context</option></select></label>
+<label id="vintageField">U.S. database vintage<select id="vintage"><option value="current">After refresh</option><option value="previous">Before refresh</option></select></label>
+        <label id="kindField" hidden>Record type<select id="kind"></select></label>
+<label id="seriesField" hidden>Source and measure<select class="wide" id="series"></select></label>
+<label>Country or territory<input type="search" id="query" placeholder="Name or ISO code"></label>
+<label>From year<select id="from"></select></label><label>Through year<select id="to"></select></label>
+<label>Order<select id="sort"><option value="priority">Largest paired difference</option><option value="name">Country name</option></select></label>
+</div>
+<div class="wrap">
+<section class="card"><div class="cardtitle"><h2 id="heading">Country × fiscal year</h2><button class="action" id="export">Export filtered cells</button></div>
+<p id="subtitle" class="note"></p><div id="legend" class="legend"></div><div class="scroller" tabindex="0" aria-label="Scrollable country and year grid"><table class="matrix" id="matrix"></table></div>
+<div class="pager"><small id="pageInfo"></small><button id="prev" class="action">Previous</button><button id="next" class="action">Next</button></div></section>
+<aside class="detail" id="detail" aria-live="polite"></aside></div>
+<section class="report" id="evidence"><h2>National spending checks</h2>
+<h3>United States · all-sector disbursements</h3>
+<p>          All country-attributed U.S. disbursements in the pinned sector file reconcile to the active database. Both vintages include military assistance. The table accounts separately for worldwide, regional and other allocations outside the 250-code registry.
+</p>
+<p id="revisionNote"></p><div class="scroller"><table class="evidence" id="nationalTable"></table></div>
+<p class="note">A blank database year means there is no observation. Positive and negative revisions, late reporting and scope changes can all affect a difference. The external sector extract ends in FY2025. Year-end reporting completeness is unverified.</p>
+<p id="usLinks"></p>
+<p id="greenbook"></p>
+<h3>Kenya · China Eximbank</h3>
+<p>Kenya’s National Treasury records a <b>US$1.6 billion</b> agreement for the Mombasa–Nairobi railway on May 11, 2014. It matches database commitment <b>gcdf-31777</b>. The creditor summary on page 1 reports <b>US$44,721,731.99</b> and <b>CNY 454,243,778.75</b> in drawdowns for FY2022/23. Six facility-level payment records now reconcile to those amounts on pages 25, 26 and 28. The drawdowns cover the creditor’s portfolio. The register shows no FY drawdown on this particular railway facility on page 23.</p>
+<p id="kenyaLinks"></p>
+<h3>China · national reporting scope</h3>
+<p>The State Council’s 2021 white paper describes national foreign assistance for 2013–18. It provides a period-level reference for grants, interest-free loans and concessional loans. The database also records commercial official finance and usually dates commitments. A percentage of China’s national aid spending covered by the database cannot be calculated from these measures. The original white paper was unavailable for direct retrieval in this audit. <a href="https://english.www.gov.cn/archive/whitepaper/202101/10/content_WS5ffa6bbbc6d0f72576943922.html">State Council white paper</a></p>
+        <h3>U.S. trade and organizational relationships</h3>
+        <p>The grid above audits the core program, finance, result and logistics tables. The atlas and country briefs also cover Census goods trade for 232 jurisdictions, EXIM export credit for 147 markets, DFC portfolio records, and U.S. agreements and initiatives. Those series have distinct reporting periods. The supplied USUN roster identifies 47 participants and gives no annual funding amounts.</p>
+        <h3>Coverage after the four repairs</h3>
+        <ul>
+          <li>The current U.S. series includes FY2024 and FY2025. Switch vintages above to inspect country-level revisions. FY2025 is provisional.</li>
+          <li>Kenya’s six borrower-reported drawdowns are independently reconciled. AidData reports 152 dated payment observations in eight other recipients. Lowy’s unconfirmed Pacific entries are excluded from financing summaries.</li>
+          <li>Five compact calendars date 6,858 quarterly MCC numeric observations. Another 210 actuals give explicit milestone dates. The 3,089 numeric actual-to-date snapshots with no observation period remain searchable as undated.</li>
+          <li>57 GCDF commitments with unknown adjusted amounts now link to same-year CLG face values. Listed infrastructure sponsors disclose equity on 80 of 366 U.S. stakes and 52 of 161 Chinese stakes. Six additional sole-owner stakes can be inferred from disclosed project equity. The atlas ranks providers only where both have complete direct disclosure for listed stakes.</li>
+        </ul>
+<details><summary>How to read coverage</summary><p>The 250 entries cover present-day ISO jurisdictions plus Kosovo. Some did not exist in earlier years. The grid tracks records held by each source. Grants, loans, commitments, payments and private projects have different reporting frames. An empty cell alone cannot establish zero activity, an omitted project or a percentage of all spending.</p>
+<p>Funding uses the flow year and displays all retained rows, including formally excluded records. The cell detail gives summary-eligible counts. Results use the actual observation year. Undated records have their own column. The numeric disclosure rate uses the retained row count as its denominator. Reported zeroes are disclosed values. National trade context is shared across providers and appears once. The U.S. cross-check remaps the source’s CS-KM label to Kosovo and applies the current country registry to both vintages.</p></details>
+</section>
+</main><script id="data" type="application/json"><!-- DATA --></script>
+<script>/* COVERAGE_JS */</script>
+</body></html>

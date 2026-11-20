@@ -1,8 +1,11 @@
 source("R/common.R")
 source("R/clean.R")
+source("R/relationships.R")
+source("R/evaluation_review.R")
 
 load_database <- function(provider, database) {
   release <- clean_release(provider)
+  if (provider=="USA") release <- build_evaluation_review(build_relationships(release))
   conn <- connect(database)
   on.exit(dbDisconnect(conn))
   sql <- paste(readLines("sql/schema.sql"), collapse="\n")
@@ -13,7 +16,7 @@ load_database <- function(provider, database) {
     }
     # A failed import rolls back the whole provider release to its previous state.
     tables <- names(release)
-    dbExecute(conn,paste("TRUNCATE",paste(dbQuoteIdentifier(conn,tables),collapse=", ")))
+    dbExecute(conn,paste("TRUNCATE",paste(dbQuoteIdentifier(conn,union(tables,c(relationship_tables,evaluation_tables))),collapse=", ")))
     for (tab in tables) {
       dbAppendTable(conn,Id(schema="toa",table=tab),as.data.frame(release[[tab]]))
     }

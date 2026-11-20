@@ -1,3 +1,8 @@
+import { evaluationReview, reviewSources } from './evaluations.js';
+import { countryProfile } from './profile.js';
+import { plotGrid } from './plot-grid.js';
+import { esc, fmt, compact, missing, present, num, money, safeLink } from './format.js';
+import { contributorPreview, contributorView } from './contributors.js';
 import { select } from 'd3-selection';
 import { zoom, zoomIdentity } from 'd3-zoom';
 import { decompressSync, strFromU8 } from 'fflate';
@@ -7,11 +12,15 @@ const snap = JSON.parse($('snapshot').textContent);
 $('snapshot').remove();
 const countries = new Map(snap.countries.map((c) => [c.iso3, c]));
 const catalogue = new Map(snap.sources.map((s) => [s.source_id, s]));
+const agencySource = snap.contributors.source;
+catalogue.set(agencySource.source_id, agencySource);
+const contributorPrefs = { scope: 'country', source: 'funding_agency', year: null, actor: null, timeline: 'leaders', expanded: false, eximPage: 0 };
 const donors = { USA: 'United States', CHN: 'China' };
 const sourceNames = {
   greenbook: 'Greenbook',
   dfc: 'DFC',
-  fa: 'ForeignAssistance.gov',
+  fa: 'ForeignAssistance.gov · archived country file',
+  us_sector_review: 'ForeignAssistance.gov · sector file', kenya_debt: 'Kenya National Treasury', pacific: 'Lowy Pacific Aid Map', mcc_calendar: 'MCC compact calendars',
   sector: 'USAID GeoCenter',
   gcdf: 'AidData GCDF 3.0',
   clg: 'AidData CLG 1.0',
@@ -32,7 +41,7 @@ const state = {
   query: '',
   page: 0,
 };
-const tabs = ['Overview', 'Funding', 'Results', 'Programs', 'Trade context'];
+const tabs = ['Overview', 'U.S. contributors', 'Funding', 'Results', 'Programs', 'Trade context'];
 const icons = {
   search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/>',
   pin: '<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.3"/>',
@@ -40,6 +49,7 @@ const icons = {
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/>',
   Overview:
     '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  'U.S. contributors': '<path d="M4 4v16h17M7 7h12M7 11h8M7 15h4"/>',
   Funding: '<path d="M3 20h18M6 16v-5m6 5V4m6 12V8"/>',
   Results: '<path d="M4 18 9 12l4 2 7-9m-6 0h6v6"/>',
   Programs:
@@ -51,37 +61,9 @@ const icon = (name) =>
 document
   .querySelectorAll('[data-icon]')
   .forEach((el) => (el.innerHTML = icon(el.dataset.icon)));
-const esc = (v) =>
-  String(v ?? '').replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
-        c
-      ],
-  );
-const fmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 9 });
-const compact = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  notation: 'compact',
-  maximumFractionDigits: 2,
-});
-const precise = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-});
 const sourceLabel = (id) => sourceNames[id] ?? id;
 const providerBadge = (d) =>
   `<span class="provider ${d === 'CHN' ? 'chn' : ''}">${donors[d]}</span>`;
-const missing = '—';
-const present = (v) => v !== null && v !== undefined && v !== '';
-const num = (v) => (present(v) ? fmt.format(v) : missing);
-const money = (v) => (present(v) ? precise.format(v) : 'Undisclosed');
-const safeLink = (url, label) =>
-  /^https?:\/\//i.test(url ?? '')
-    ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`
-    : '';
 const coverage = (c) =>
   c.us && c.cn
     ? 'Both providers'
@@ -102,11 +84,13 @@ const mapKeys = {
     'China higher': '#c18462',
     'Equal disclosed totals': '#a2c3aa',
     'No paired amounts': '#566f71',
+    'Incomplete sponsor disclosures': '#c3ae83',
   },
 };
 function mapCategory(c) {
   if ($('mapMode').value === 'coverage') return coverage(c);
   if (c.us_equity == null || c.cn_equity == null) return 'No paired amounts';
+  if (!c.us_equity_complete || !c.cn_equity_complete) return 'Incomplete sponsor disclosures';
   if (c.us_equity === c.cn_equity) return 'Equal disclosed totals';
   return c.us_equity > c.cn_equity ? 'U.S. higher' : 'China higher';
 }
@@ -114,9 +98,10 @@ function color(c) {
   return mapKeys[$('mapMode').value][mapCategory(c)];
 }
 const buttons = ['sourcesBtn', 'methodsBtn'];
-let data, programs, byFinance, byResult, series, pageRows, focused;
-function decode(code) {
-  const bytes = Uint8Array.from(atob(snap.bundles[code]), (c) =>
+let localContributions, overallContributions;
+let data, review, programs, byFinance, byResult, series, pageRows, focused;
+function decodeBundle(blob) {
+  const bytes = Uint8Array.from(atob(blob), (c) =>
     c.charCodeAt(0),
   );
   return JSON.parse(strFromU8(decompressSync(bytes)));
@@ -144,7 +129,7 @@ function aggregate(rows) {
 }
 const definitions = [
   {
-    id: 'fa',
+    id: 'us_sector_review',
     provider: 'USA',
     label: 'All-sector disbursements',
     period: 'FY',
@@ -285,7 +270,6 @@ const mapLabel = badge
   .append('text')
   .attr('y', -9)
   .attr('fill', '#19343c')
-  .attr('font-family', 'DM Sans, sans-serif')
   .attr('font-size', 11)
   .attr('font-weight', 600);
 let transform = zoomIdentity;
@@ -313,7 +297,9 @@ function mark(c) {
   svg.selectAll('.geo.active').classed('active', false);
   svg.selectAll(`[data-code="${c.iso3}"]`).classed('active', true);
   marker.attr('transform', `translate(${c.point.join(',')})`);
-  mapLabel.text(c.name.length > 30 ? c.iso3 : c.name);
+  const useCode = c.name.length > 30;
+  mapLabel.attr('font-family', useCode ? 'var(--mono)' : 'var(--sans)')
+    .text(useCode ? c.iso3 : c.name);
   const w = mapLabel.node().getComputedTextLength() + 14;
   const x = c.point[0] > 770 ? -w - 5 : 6;
   labelBox.attr('x', x).attr('width', w);
@@ -433,7 +419,10 @@ function choose(code, fromSearch = false) {
   $('search').value = '';
   if (fromSearch) svg.call(zoomer.transform, zoomIdentity);
   if (changed || !data) {
-    data = decode(code);
+    data = decodeBundle(snap.bundles[code]);
+    review = decodeBundle(snap.evaluations[code]);
+    localContributions = decodeBundle(snap.contributors.scopes[code]);
+    Object.assign(contributorPrefs, { scope: 'country', year: null, actor: null, timeline: 'leaders', expanded: false, eximPage: 0 });
     programs = new Map(data.program.map((p) => [key(p.provider, p.id), p]));
     byFinance = indexRows(data.finance, 'program_id');
     byResult = indexRows(data.result, 'program_id');
@@ -455,7 +444,7 @@ function choose(code, fromSearch = false) {
 function renderProfile() {
   $('profileStats').innerHTML = ['USA', 'CHN']
     .map((provider) => {
-      const order = provider === 'USA' ? ['fa', 'greenbook'] : ['clg', 'gcdf'];
+      const order = provider === 'USA' ? ['us_sector_review', 'greenbook'] : ['clg', 'gcdf'];
       const id = order.find((id) => series[id].length),
         r = id ? series[id].at(-1) : null;
       const def = definitions.find((d) => d.id === id);
@@ -475,7 +464,12 @@ $('download').onclick = () => {
   const ids = new Set([
     'iso',
     ...data.program.map((r) => r.source_id),
+    ...snap.profiles[state.code].agreements.map(r => r.source_id),
+    ...snap.profiles[state.code].organizations.map(r => r.source_id),
+    ...(snap.profiles[state.code].goods.length ? ['census_goods','schedule_c'] : []),
+    ...reviewSources, ...review.programs.map(r => r.source_id), ...review.reports.map(r => r.source_id),
     ...data.context.map((r) => r.source_id),
+    ...data.result.map((r) => r.timing_source_id).filter(Boolean),
   ]);
   download(
     state.code + '-country-evidence.json',
@@ -484,7 +478,10 @@ $('download').onclick = () => {
         country: countries.get(state.code).name,
         iso3: state.code,
         code_system: countries.get(state.code).code_system,
-        sources: snap.sources.filter((s) => ids.has(s.source_id)),
+        sources: snap.sources.filter(s => ids.has(s.source_id)),
+        us_relationship_profile: snap.profiles[state.code],
+        post_completion_review: review,
+        us_contributors: localContributions,
         ...data,
       },
       null,
@@ -525,6 +522,7 @@ function rankResults(a, b) {
     'Program report',
     'Reported before/after',
     'Reported operational output',
+    'Quarterly program monitoring',
     'Program monitoring',
     'Customs records',
   ];
@@ -534,7 +532,7 @@ function rankResults(a, b) {
     (priorities.includes(r.method)
       ? priorities.indexOf(r.method)
       : priorities.length);
-  return rank(a) - rank(b) || a.id.localeCompare(b.id);
+  return rank(a) - rank(b) || (b.observed_year ?? 0) - (a.observed_year ?? 0) || a.id.localeCompare(b.id);
 }
 function equity() {
   const vals = ['USA', 'CHN'].map((provider) =>
@@ -548,18 +546,19 @@ function equity() {
     ),
   );
   const top = Math.max(1, ...vals.map((r) => r.value ?? 0));
-  return `<section class="panel"><h3>Infrastructure sponsor equity</h3><p class="hint">Disclosed commitments at financial close · 1999–2023</p>${vals.map((r, i) => `<div class="equityrow"><div>${providerBadge(i ? 'CHN' : 'USA')}<b>${r.value !== null ? compact.format(r.value) : r.n ? 'Undisclosed' : 'No records'}</b></div><div class="track ${i ? 'chn' : ''}"><b style="width:${((r.value ?? 0) / top) * 100}%"></b></div><small>${r.known} of ${r.n} sponsor records disclose equity</small></div>`).join('')}<button class="linkBtn" data-jump="Funding" data-filter="ppi">Inspect sponsor records →</button></section>`;
+  return `<section class="panel"><h3>Infrastructure sponsor equity</h3><p class="hint">Disclosed subtotal for listed stakes at financial close · 1999–2023 · includes state-owned sponsors</p>${vals.map((r, i) => `<div class="equityrow"><div>${providerBadge(i ? 'CHN' : 'USA')}<b>${r.value !== null ? compact.format(r.value) : r.n ? 'Undisclosed' : 'No records'}</b></div><div class="track ${i ? 'chn' : ''}"><b style="width:${((r.value ?? 0) / top) * 100}%"></b></div><small>${r.known} of ${r.n} sponsor records disclose equity</small></div>`).join('')}<button class="linkBtn" data-jump="Funding" data-filter="ppi">Inspect sponsor records →</button></section>`;
 }
 function featured() {
   const eligible = data.result
     .filter(
       (r) =>
-        r.actual != null &&
+        r.actual != null && (parent(r).source_id !== 'mcc' || r.observed_year != null) &&
         ['Outcome', 'Output', 'Preference use'].includes(r.level),
     )
     .sort(rankResults);
   const r = eligible[0];
-  return `<section class="panel"><h3>Reported country result</h3>${r ? `<div class="featured"><span class="sourcetag">${donors[r.provider]} · ${esc(r.method)} · ${esc(sourceLabel(parent(r).source_id))}${r.observed_year ? ' · ' + r.observed_year : ''}</span><p class="value">${esc(resultValue(r))}</p><h4>${esc(r.indicator)}</h4></div><button class="linkBtn" data-record-kind="result" data-record-id="${esc(r.id)}" data-provider="${r.provider}">Read evidence and source →</button>` : '<p class="emptymsg">No numeric outcome, output or preference-use observation in this release.</p>'}</section>`;
+  if (r?.provider === 'USA' && snap.profiles[state.code].evidence.some(e => e.id === r.id)) return '';
+  return `<section class="panel"><h3>Reported country result</h3>${r ? `<div class="featured"><span class="sourcetag">${donors[r.provider]} · ${esc(r.method)} · ${esc(sourceLabel(parent(r).source_id))}${r.observed_year ? ' · ' + r.observed_year : ' · Observation year unreported'}</span><p class="value">${esc(resultValue(r))}</p><h4>${esc(r.indicator)}</h4></div><button class="linkBtn" data-record-kind="result" data-record-id="${esc(r.id)}" data-provider="${r.provider}">Read evidence and source →</button>` : '<p class="emptymsg">No numeric outcome, output or preference-use observation in this release.</p>'}</section>`;
 }
 function history(def) {
   const rows = series[def.id],
@@ -571,20 +570,36 @@ function history(def) {
       high = Math.max(0, ...known.map((r) => r.value));
     const lo = years[0],
       hi = years.at(-1),
-      x = (year) => 53 + ((year - lo) / Math.max(1, hi - lo)) * 323,
+      x = (year) => lo === hi ? 214 : 53 + ((year - lo) / (hi - lo)) * 323,
       y = (v) => 70 - ((v - low) / Math.max(1, high - low)) * 56;
     const ticks = [...new Set([low, high])];
+    const yearTicks = [...new Set([lo, hi])];
     chart = `<svg class="miniChart" viewBox="0 0 400 96" role="img" aria-label="${esc(def.label)} by year"><title>${esc(def.label)} in current USD, ${lo}–${hi}</title>
-      ${ticks.map((v) => `<path d="M51 ${y(v)}H380" stroke="#d8e1da" fill="none"/><text class="chartlabel" x="48" y="${y(v) + 3}" text-anchor="end">${compact.format(v)}</text>`).join('')}
+      ${plotGrid(yearTicks.map(x), ticks.map(y), 53, 376, 14, 70)}
+      ${ticks.map((v) => `<text class="chartlabel" x="48" y="${y(v) + 3}" text-anchor="end">${compact.format(v)}</text>`).join('')}
       ${known.map((r) => `<line x1="${x(r.year)}" x2="${x(r.year)}" y1="${y(0)}" y2="${y(r.value)}" stroke="${def.provider === 'USA' ? '#327b78' : '#a55732'}" stroke-width="${Math.min(9, 170 / Math.max(1, hi - lo))}"/><circle cx="${x(r.year)}" cy="${y(r.value)}" r="2.8" fill="${def.provider === 'USA' ? '#327b78' : '#a55732'}"><title>${r.year} · ${money(r.value)} · ${r.known}/${r.n} amounts</title></circle>`).join('')}
-      <text class="chartlabel" x="50" y="91">${lo}</text>${hi === lo ? '' : `<text class="chartlabel" x="378" y="91" text-anchor="end">${hi}</text>`}</svg>`;
+      ${yearTicks.map((year) => `<text class="chartlabel" x="${x(year)}" y="91" text-anchor="middle">${year}</text>`).join('')}</svg>`;
   }
   return `<section class="panel"><span class="sourcetag">${donors[def.provider]} · ${esc(sourceLabel(def.id))}</span><h3>${esc(def.label)}</h3>${chart}<button class="linkBtn" data-history="${def.id}">Annual values →</button></section>`;
 }
+function paymentsOverview() {
+  const draws = data.finance.filter(f => f.measure === 'borrower-reported drawdown');
+  const payments = data.finance.filter(f => f.provider === 'CHN' && f.measure === 'disbursement');
+  if (!draws.length && !payments.length) return '';
+  const amounts = new Map();
+  for (const f of draws) {
+    const k = [f.period_ref, f.reported_currency].join(' · ');
+    amounts.set(k, (amounts.get(k) ?? 0) + f.reported_amount);
+  }
+  const lines = [...amounts].map(([k,v]) => esc(k) + ' ' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}));
+  return '<section class="panel"><h3>Reported Chinese payments</h3>' +
+    (draws.length ? `<p>Kenya’s Treasury reports ${draws.length} facility drawdowns. ${lines.join(' · ')}</p><button class="linkBtn" data-jump="Funding" data-filter="kenya_debt">Inspect the facilities →</button>` : '') +
+    (payments.length ? `<p>AidData reports ${payments.length} dated disbursement observations. These cover selected facilities.</p>` : '') + '</section>';
+}
 function overview() {
   return (
-    section('Country overview') +
-    `<div class="overviewGrid">${equity()}${featured()}</div>` +
+    section('Country overview') + countryProfile(snap.profiles[state.code], localContributions) + contributorPreview(localContributions) +
+    `<div class="overviewGrid">${equity()}${featured()}${paymentsOverview()}</div>` +
     section(
       'Public finance over time',
       'Current U.S. dollars. Each series has its own scale, reporting basis and years of coverage.',
@@ -592,6 +607,13 @@ function overview() {
     `<div class="charts">${definitions.map(history).join('')}</div>`
   );
 }
+function renderContributors() {
+  if (contributorPrefs.scope === 'all' && !overallContributions)
+    overallContributions = decodeBundle(snap.contributors.scopes.ALL);
+  const all = contributorPrefs.scope === 'all';
+  return contributorView(all ? overallContributions : localContributions, contributorPrefs, countries.get(state.code).name, catalogue);
+}
+
 function contextView() {
   const rows = data.context;
   if (!rows.length)
@@ -630,7 +652,7 @@ const ledgerInfo = {
       'Program or project',
       'Measure',
       'Period',
-      'Current USD',
+      'Reported amount',
     ],
   },
   Results: {
@@ -714,7 +736,7 @@ function renderTable() {
         main = info.type === 'result' ? r.indicator : p.name;
       const rest =
         info.type === 'finance'
-          ? `<td>${esc(r.measure)}</td><td>${esc(r.period_ref)}</td><td class="mnum">${esc(money(r.usd))}</td>`
+          ? `<td>${esc(r.measure)}</td><td>${esc(r.period_ref)}</td><td class="mnum">${esc(reportedMoney(r))}</td>`
           : info.type === 'result'
             ? `<td>${esc(r.method)}</td><td class="mnum">${esc(resultValue(r))}</td>`
             : `<td>${esc(p.channel)}</td><td>${p.year ?? missing}</td>`;
@@ -734,9 +756,13 @@ function renderEvidence() {
   $('evidence').innerHTML =
     state.tab === 'Overview'
       ? overview()
-      : state.tab === 'Trade context'
+      : state.tab === 'U.S. contributors'
+        ? renderContributors()
+        : state.tab === 'Trade context'
         ? contextView()
-        : ledger();
+        : (state.tab === 'Results' ? evaluationReview(review, countries.get(state.code), snap.reviewed_countries.map(code => countries.get(code)), catalogue) : '') + ledger();
+  const jump = document.getElementById('evaluationCountry');
+  if (jump) jump.onchange = () => { if (jump.value) choose(jump.value, true); };
   if (ledgerInfo[state.tab]) {
     $('sourceFilter').value = state.source;
     $('sourceFilter').onchange = (e) => {
@@ -794,10 +820,15 @@ function citations(p) {
   ])}
     <p>${[safeLink(p.citation, 'Project citation'), safeLink(s.download_url, 'Pinned source file'), safeLink(s.publisher_url, 'Publisher')].filter(Boolean).join(' · ')}</p>`;
 }
+function reportedMoney(f) {
+  return f.reported_currency && f.reported_amount != null
+    ? f.reported_currency + ' ' + new Intl.NumberFormat('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}).format(f.reported_amount)
+    : money(f.usd);
+}
 function financeDetail(f) {
   return dl([
     ['Measure', f.measure],
-    ['Amount', money(f.usd)],
+    ['Reported amount', reportedMoney(f)], ['Period start', f.period_start], ['Period end', f.period_end],
     ['Period', f.period_ref],
     ['Instrument', f.instrument],
     ['Estimated amount', f.amount_estimated],
@@ -813,13 +844,13 @@ function resultDetail(r) {
       ['Baseline', r.baseline_text ?? r.baseline],
       ['Baseline year', r.baseline_year],
       ['Target', r.target_text ?? r.target],
-      ['Observed year', r.observed_year],
+      ['Observed year', r.observed_year ?? 'Unreported'], ['Period start', r.period_start], ['Period end', r.period_end], ['Dating basis', r.dating_basis],
       ['Indicator level', r.level],
       ['Method', r.method],
       ['Unit', r.unit],
       ['Indicator ID', r.id],
     ]) +
-    `<p>${esc(r.interpretation)}</p><p class="hint">${esc(p.name)}</p>`
+    `<p>${esc(r.interpretation)}</p>${r.timing_source_id ? safeLink(catalogue.get(r.timing_source_id).download_url, "Timing source") : ""}<p class="hint">${esc(p.name)}</p>`
   );
 }
 function openRecord(r, kind) {
@@ -828,7 +859,8 @@ function openRecord(r, kind) {
   const intro = `<span class="provider ${p.provider === 'CHN' ? 'chn' : ''}">${donors[p.provider]}</span> <span class="sourcetag"> · ${esc(countries.get(state.code).name)}</span>`;
   const info = dl([
     ['Program', p.name],
-    ['Actor', p.actor],
+    ['Actor', p.actor], ['Sponsor ownership (%)', p.sponsor_ownership_pct],
+    ['Implied stake from 100% sole ownership of reported equity', p.implied_sole_sponsor_equity_usd == null ? null : money(p.implied_sole_sponsor_equity_usd)],
     ['Channel', p.channel],
     ['Sector', p.sector],
     ['Status', p.status],
@@ -894,12 +926,50 @@ function showHistory(id) {
             .join('')}</tbody></table></div>`
         : '<p class="emptymsg">No observations in this release.</p>'
     }
-    <h3>Source</h3><p>${esc(s.title)} · ${safeLink(s.download_url, 'Pinned file')}</p>`,
+    <h3>Source</h3><p>${esc(s.title)} · ${safeLink(s.download_url, ['usun_toa','ustr_fta','cofa'].includes(s.source_id) ? 'Reference' : 'Pinned file')}</p>`,
   );
 }
+$('evidence').addEventListener('change', (e) => {
+  const name = e.target.dataset.contributorFilter;
+  if (!name) return;
+  contributorPrefs[name] = e.target.value;
+  contributorPrefs.eximPage = 0;
+  if (name !== 'actor' && name !== 'timeline') {
+    contributorPrefs.actor = null;
+    contributorPrefs.expanded = false;
+    if (name !== 'year') {
+      contributorPrefs.year = null;
+      contributorPrefs.timeline = 'leaders';
+    }
+  }
+  renderEvidence();
+  document.querySelector('[data-contributor-filter="' + name + '"]')?.focus({preventScroll:true});
+});
 $('evidence').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
+  if (b.hasAttribute('data-exim-page')) {
+    contributorPrefs.eximPage += Number(b.dataset.eximPage);
+    renderEvidence();
+    const next = document.querySelector(`[data-exim-page="${b.dataset.eximPage}"]:not(:disabled)`);
+    (next ?? document.querySelector('[data-exim-page]:not(:disabled)'))?.focus({preventScroll:true});
+    return;
+  }
+  if (b.hasAttribute('data-contributor-actor') || b.hasAttribute('data-more-contributors')) {
+    if (b.hasAttribute('data-more-contributors')) contributorPrefs.expanded = !contributorPrefs.expanded;
+    else contributorPrefs.actor = b.dataset.contributorActor;
+    renderEvidence();
+    const selector = b.hasAttribute('data-more-contributors') ? '[data-more-contributors]' : '[data-contributor-actor][aria-pressed="true"]';
+    document.querySelector(selector)?.focus({preventScroll:true});
+    return;
+  }
+  if (b.dataset.chartSource) {
+    Object.assign(contributorPrefs, {scope:'country', source:b.dataset.chartSource,
+      timeline:b.dataset.chartActor || 'leaders', actor:b.dataset.chartActor || null, year:null, expanded:false, eximPage:0});
+    activate('U.S. contributors');
+    document.querySelector('.orgTimeline')?.scrollIntoView({block:'start'});
+    return;
+  }
   if (b.dataset.jump) {
     activate(b.dataset.jump, b.dataset.filter);
     $('tabs').scrollIntoView({ block: 'nearest' });
@@ -927,23 +997,33 @@ $('evidence').addEventListener('click', (e) => {
 });
 function sources() {
   const ids = new Set(
-    [...data.program, ...data.context].map((r) => r.source_id),
+    [...data.program, ...data.context].map((r) => r.source_id).concat(data.result.map((r) => r.timing_source_id).filter(Boolean)),
   );
-  const sourceRows = [...snap.sources].sort(
+  if (localContributions.rows.some(r => r.source === agencySource.source_id)) ids.add(agencySource.source_id);
+  if (state.tab === 'Results') [...reviewSources, ...review.programs.map(r => r.source_id), ...review.reports.map(r => r.source_id)].forEach(id => ids.add(id));
+  const profile = snap.profiles[state.code];
+  for (const row of [...profile.organizations, ...profile.agreements]) ids.add(row.source_id);
+  if (profile.goods.length) { ids.add('census_goods'); ids.add('schedule_c'); }
+  const sourceRows = [...catalogue.values()].sort(
     (a, b) =>
       Number(ids.has(b.source_id)) - Number(ids.has(a.source_id)) ||
       a.title.localeCompare(b.title),
   );
   showDialog(
     'Sources and coverage',
-    `<p>Both databases index 249 ISO countries and territories plus Kosovo. The coverage map shows where a provider appears in the sources. The equity map compares disclosed sponsor stakes where both providers have a published amount. A record can describe a pledge, a cancellation or an ineligible year.</p>
+    `<p>Both databases index 249 ISO countries and territories plus Kosovo. The coverage map shows where a provider appears in the sources. The equity map compares disclosed sponsor stakes only where every listed stake for both providers has a published dollar amount. A record can describe a pledge, a cancellation or an ineligible year.</p>
     <h3>Comparing financing</h3><p>Disbursements measure reported payments. Commitments measure financing agreements. The profile shows the latest available year in the U.S. disbursement series and the PRC commitment series, with the Greenbook obligation series as a U.S. fallback. Final years may be partial.</p>
     <p>World Bank PPI provides a common definition for named sponsor equity. Coverage includes state-owned sponsors. The bars sum disclosed stakes only. A missing stake stays unknown. Sources and years differ across the other financial series.</p>
     <h3>Reading results</h3><p>Monitoring indicators, evaluation estimates and reported project outputs have different evidentiary strength. AGOA customs values measure preference use. National logistics lead times provide context. These data do not measure political influence or predict the effect of joining Trade over Aid.</p>
-    <h3>Source files</h3>${sourceRows.map((s) => `<details><summary>${esc(s.title)}</summary><p>${ids.has(s.source_id) ? 'Contains observations for this country.' : 'Release reference.'}</p><p>${safeLink(s.publisher_url, 'Publisher')} · ${safeLink(s.download_url, 'Pinned file')}</p><p class="hint">SHA-256 · ${esc(s.sha256)}</p></details>`).join('')}
+    <h3>Source files</h3>${sourceRows.map((s) => `<details><summary>${esc(s.title)}</summary><p>${ids.has(s.source_id) ? 'Contains observations for this country.' : 'Release reference.'}</p><p>${safeLink(s.publisher_url, 'Publisher')} · ${safeLink(s.download_url, ['usun_toa','ustr_fta','cofa'].includes(s.source_id) ? 'Reference' : 'Pinned file')}</p><p class="hint">${['usun_toa','ustr_fta','cofa'].includes(s.source_id) ? 'Bundled transcription or crosswalk' : 'Source file'} SHA-256 · ${esc(s.sha256)}</p></details>`).join('')}
     <details><summary>Country matching exclusions</summary><p>Source labels recorded outside the country registry, by database. Shared national context sources appear in both.</p><div class="tablewrap"><table><thead><tr><th>Database / source</th><th>Label / reason</th><th>Rows</th></tr></thead><tbody>${snap.exclusions.map((r) => `<tr><td>${donors[r.provider]} · ${esc(sourceLabel(r.source_id))}</td><td>${esc(r.label)}<br><small>${esc(r.reason)}</small></td><td>${num(r.n)}</td></tr>`).join('')}</tbody></table></div></details>
     <h3>Geography and software</h3><p>Public-domain Natural Earth 1:50m map units, v5.1.2. Boundaries follow the cartographic source. Small territories have point selectors. The U.S. Minor Outlying Islands selector is placed at Wake Island. Unassigned disputed shapes are neutral.</p><details><summary>Open-source notices</summary>${$('licenses').innerHTML}</details>`,
   );
 }
 buttons.forEach((id) => ($(id).onclick = sources));
+window.matchMedia('(max-width:650px)').addEventListener('change', () => {
+  if (state.tab === 'U.S. contributors') renderEvidence();
+});
 choose('HND');
+// Re-measure the label after the embedded faces replace the browser's first-paint fonts.
+document.fonts.ready.then(() => mark(countries.get(state.code)));

@@ -1,3 +1,4 @@
+source("R/release_evidence.R")
 # Return one release at a time. Source row numbers refer to the checksum-pinned files.
 clean_release <- function(provider) {
   iso <- jsonlite::fromJSON(cached("iso"))[["3166-1"]]
@@ -43,7 +44,20 @@ clean_release <- function(provider) {
                channel="government",sector="All sectors including military",year=as.integer(substr(`Fiscal Year`,1,4)),
                period=paste0("FY",`Fiscal Year`))]
     programs$fa <- p
-    money$fa <- finance(p,x$current_amount,"disbursement","country total")
+    programs$fa[, status:="Superseded country-file vintage"]
+    money$fa <- finance(p,x$current_amount,"disbursement","country total",FALSE)
+
+    x <- fread(cached("us_sector_review"),integer64="double")[`Transaction Type Name`=="Disbursements"]
+    stopifnot(!anyNA(x$current_amount), !anyDuplicated(x,by=c("Country Code","Fiscal Year","US Sector ID")))
+    code <- fifelse(x[["Country Code"]]=="CS-KM","XKX",x[["Country Code"]])
+    x <- retain(x,"us_sector_review",x[["Country Name"]],code)
+    p <- x[,.(id=paste("fa-sector",iso3,`Fiscal Year`,`US Sector ID`,sep="-"),iso3,
+      source_id="us_sector_review",locator=paste(`Country Code`,`Fiscal Year`,`US Sector ID`,"Disbursements",sep="/"),
+      name=`US Sector Name`,actor="U.S. government",channel="government",
+      sector=paste(`US Category Name`,`US Sector Name`,sep=" / "),year=as.integer(`Fiscal Year`),
+      period=paste0("FY",`Fiscal Year`),status="Current sector-file vintage")]
+    programs$current_us <- p
+    money$current_us <- finance(p,x$current_amount,"disbursement","U.S. government sector")
 
     x <- fread(cached("sector"),sep="\t")[Aidtype=="Spent" & Category!="Total" & FiscalYear<=2013]
     x[, row := .I]
@@ -78,6 +92,7 @@ clean_release <- function(provider) {
                          actual=numeric_value(ActualToDate),baseline_text=Baseline,target_text=EndOfProgramTarget,actual_text=ActualToDate,target=numeric_value(EndOfProgramTarget),
                          method="Program monitoring",interpretation=paste("ITT",IndicatorId,Classification,
                                  fcoalesce(ActivityName,""),"| Actual to date. Reporting end date unspecified."))]
+    results$mcc <- mcc_observations(x,results$mcc)
     x <- fread(cached("agoa"))
     x <- retain(x,"agoa",x$country,x$iso3)
     programs$agoa <- x[,.(id=paste("agoa",iso3,year,sep="-"),iso3,source_id="agoa",locator=paste(iso3,year),
@@ -126,8 +141,47 @@ clean_release <- function(provider) {
                         level=fifelse(unit=="kWh","Output","Outcome"),unit,baseline,actual,comparator,observed_year,
                         method=fifelse(unit=="kWh","Reported operational output","Reported before/after"),
                         interpretation=paste(note,"Recorded project completion year:",x$completion_year[match(record,x$aid_data_record_id)]))]
+    money$reviewed_draws <- narrative_payments(x)
+    kenya <- kenya_payments()
+    programs$kenya <- kenya$program
+    money$kenya <- kenya$finance
+
+    # A source-reported spending entry is distinct from a borrower-verified payment.
+    x <- fread(cmd=paste("gzip -dc",shQuote(cached("pacific"))),na.strings=c("","NA"))
+    x[,rownum:=.I+1L]
+    x <- x[Donor=="China" & `Spent/Committed`=="Spent"]
+    x[, collection:=as.Date(suppressWarnings(as.numeric(`Data Collection Date`)),origin="1899-12-30")]
+    x[, stamp:=as.Date(`Final Transaction Date`)]
+    x <- x[!is.na(stamp) & !is.na(collection) & stamp<=collection & stamp<=as.Date("2023-11-01")]
+    x <- x[!duplicated(x,by=setdiff(names(x),"rownum"))]
+    x <- retain(x,"pacific",x$Recipient,to_iso(x$Recipient))
+    p <- x[,.(id=paste0("pam-",rownum),iso3,source_id="pacific",locator=paste("CSV row",rownum,`2023 Project Identifier`),
+      name=`Project Title`,actor=AgencyName,channel="official finance",sector=`Lowy Sector`,
+      year=as.integer(format(stamp,"%Y")),period=paste0("CY",format(stamp,"%Y")),status=`Confirmation status`,
+      details=paste("Lowy status:",`Confirmation status`,"| Published source references:",`Internet link`),
+      citation=sub(";.*","",`Internet link`))]
+    stopifnot(all(p$status=="Not confirmed"))
+    programs$pacific <- p
+    money$pacific <- finance(p,numeric_value(x[["USD Current - Transaction Value"]]),"source-reported spending (unconfirmed)",x[["Flow Type"]],FALSE)
     # Independent 2022–23 extract from the later, wider CLG release. Use nominal amount only.
-    x <- fread(cached("clg"))[year %in% 2022:2023]
+    clg <- fread(cached("clg"))
+    original <- e$gcdf3_dataset
+    gaps <- data.table(record_id=paste0("AIDDATA-",original$aid_data_record_id),
+      iso3=original$recipient_iso_3, year=original$commitment_year,
+      keep=is.na(original$adjusted_amount_nominal_usd) & original$recommended_for_aggregates=="Yes")
+    cross <- merge(clg[recommended_for_aggregates=="Yes" & !is.na(amount_nominal_usd_mn) & year<=2021],
+      gaps[keep==TRUE,.(record_id,country_iso3=iso3,year)],by=c("record_id","country_iso3","year"))
+    cross <- cross[country_iso3 %in% country$iso3]
+    stopifnot(!anyDuplicated(cross$record_id))
+    p <- cross[,.(id=paste0("clg-check-",record_id),iso3=country_iso3,source_id="clg",
+      locator=record_id,name=project_title,actor=funder_or_investor,year,period=paste0("CY",year),
+      channel="official finance",sector,status,details=paste("Cross-vintage face value for",
+        sub("AIDDATA-","gcdf-",record_id),"with unknown adjusted commitment. Excluded from time-series totals."),
+      citation=paste0("https://china.aiddata.org/projects/",sub("AIDDATA-","",record_id),"/"))]
+    programs$clg_cross <- p
+    money$clg_cross <- finance(p,cross$amount_nominal_usd_mn*1e6,"cross-vintage face-value disclosure",
+      paste(cross$flow_class,cross$flow_type,sep=" / "),FALSE)
+    x <- clg[year %in% 2022:2023]
     x <- retain(x,"clg",x$country_raw,x$country_iso3)
     p <- x[,.(id=paste0("clg-",record_id),iso3,source_id="clg",locator=record_id,
               name=project_title,actor=funder_or_investor,channel="official finance",sector,status,year,
@@ -162,6 +216,15 @@ clean_release <- function(provider) {
              details=paste("Reported sponsor origin",origin_name,"|",sponsor,"|",`Type of PPI`,"|",Subsector))]
   p[actor=="Risen Energy Co., Ltd" & provider=="CHN",
     details:=paste(details,"| AidData classifies the named sponsor as Chinese Private Sector in record 90168. Ownership classification is sourced separately from PPI.")]
+  shares <- regmatches(x$sponsor,regexec("/\\s*([0-9.]+)\\s*%\\s*\\)\\s*$",x$sponsor))
+  p[,sponsor_ownership_pct:=vapply(shares,function(v) if(length(v)) as.numeric(v[2]) else NA_real_,numeric(1))]
+  stopifnot(all(is.na(p$sponsor_ownership_pct) | between(p$sponsor_ownership_pct,0,100)))
+  # The sole named sponsor owns 100% and the workbook reports positive total EQUITY.
+  # Preserve the inferred value separately from direct stake disclosures.
+  total_equity <- numeric_value(x[["Total Equity"]])*1e6
+  sole <- is.na(amount) & !is.na(p$sponsor_ownership_pct) & p$sponsor_ownership_pct==100 &
+    x[["Sponsors Country"]]==origin & !is.na(total_equity) & total_equity>0
+  p[,implied_sole_sponsor_equity_usd:=fifelse(sole,total_equity,NA_real_)]
   programs$ppi <- p
   money$ppi <- finance(p,amount,"sponsor equity commitment","sponsor equity")
 
@@ -172,7 +235,7 @@ clean_release <- function(provider) {
   }))
   p <- rbindlist(programs,fill=TRUE)
   r <- rbindlist(results,fill=TRUE)
-  sources <- registry[source_id %in% c("iso",p$source_id,context$source_id)]
+  sources <- registry[source_id %in% c("iso",p$source_id,context$source_id,r$timing_source_id)]
   list(source=sources,country=country,program=p,finance=rbindlist(money,fill=TRUE),
        result=r,context=context,exclusions=rbindlist(excluded))
 }

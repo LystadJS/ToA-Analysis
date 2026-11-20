@@ -1,0 +1,32 @@
+report_id	sequence	panel	indicator	result	value	unit	interpretation	locator
+6336	1	Round trip to the primary water source	Treatment · baseline	Observed	161	minutes	Mean of community median round-trip times.	Final report, Table 7.14
+6336	2	Round trip to the primary water source	Treatment · follow-up	Observed	76	minutes	Mean of community median round-trip times.	Final report, Table 7.14
+6336	3	Round trip to the primary water source	Comparison · baseline	Observed	137	minutes	Mean of community median round-trip times.	Final report, Table 7.14
+6336	4	Round trip to the primary water source	Comparison · follow-up	Observed	114	minutes	Mean of community median round-trip times.	Final report, Table 7.14
+6336	5	Estimated effect	Change relative to comparison communities	Lower	-62	minutes	Difference in differences, p < 0.05.	Final report, Table 7.14
+13704	1	Three years after farmer training	Household income	No detectable change			No statistically detectable improvement reported.	Evaluators’ abstract, 3ie record 13704
+13704	2	Three years after farmer training	Household consumption	No detectable change			No statistically detectable improvement reported.	Evaluators’ abstract, 3ie record 13704
+13704	3	Three years after farmer training	Higher-value crop cultivation	No detectable change			No statistically detectable improvement reported.	Evaluators’ abstract, 3ie record 13704
+13704	4	Three years after farmer training	Agricultural practices	No detectable change			No statistically detectable improvement reported.	Evaluators’ abstract, 3ie record 13704
+5331	1	After farmer training	Crop yields overall	No detectable change			No overall impact detected.	Evaluators’ abstract, 3ie record 5331
+5331	2	After farmer training	Crop income overall	No detectable change			The average masks regional differences.	Evaluators’ abstract, 3ie record 5331
+5331	3	After farmer training	Seed and fertilizer use	Higher			The authors attribute most of the increase to the starter pack.	Evaluators’ abstract, 3ie record 5331
+5331	4	After farmer training	Crop income · Northern Agricultural Zone	Higher			A statistically significant increase.	Evaluators’ abstract, 3ie record 5331
+5331	5	After farmer training	Crop income · Southern Horticultural Belt	Lower			A statistically significant decrease.	Evaluators’ abstract, 3ie record 5331
+5331	6	After farmer training	Crop income · Afram Basin	No detectable change			No detectable regional effect.	Evaluators’ abstract, 3ie record 5331
+23527	1	Land and credit markets	Female co-ownership	Higher			Titling helped give effect to the earlier legal right to co-own.	Evaluators’ abstract, 3ie record 23527
+23527	2	Land and credit markets	Land sales and mortgages	Separate reform			The study attributes market effects to a policy reducing transaction costs.	Evaluators’ abstract, 3ie record 23527
+23527	3	Land and credit markets	Registration time	Lower			Shorter registration times support the transaction-cost interpretation.	Evaluators’ abstract, 3ie record 23527
+20118	1	Social and behavioral outcomes	Indices with persistent improvement	Higher	8	of 13 indices	Eight of thirteen indices showed large, persistent improvements.	Evaluators’ abstract, 3ie record 20118
+20118	2	Economic and ecological outcomes	Rangeland, cattle and household outcomes	Negative or inconclusive			The authors report negative or null effects across these domains.	Evaluators’ abstract, 3ie record 20118
+6337	1	Income in targeted activities	After two years in the program	Higher	30	percent above baseline	Approximate plateau in income from targeted activities.	Evaluators’ abstract, 3ie record 6337
+6337	2	Household welfare	Average household living standards	No detectable change			No statistically significant average improvement was detected.	Evaluators’ abstract, 3ie record 6337
+12695	1	Post-program follow-up	Gross farm income	Higher			The estimated increase persisted.	Evaluators’ abstract, 3ie record 12695
+12695	2	Post-program follow-up	Productive farm capital	Higher			The estimated effect continued to rise after the program concluded.	Evaluators’ abstract, 3ie record 12695
+8060	1	Enrollment after six years	Primary school enrollment	Higher	15.5	percentage points	Difference in enrollment between program and comparison villages.	Evaluators’ abstract, 3ie record 8060
+8060	2	Learning after six years	Standardized test score	Higher	0.29	standard deviations	Standardized difference on the test-score scale.	Evaluators’ abstract, 3ie record 8060
+19120	1	Ten-year follow-up	School attendance	Higher			Increased for primary-school-age children.	Evaluators’ abstract, 3ie record 19120
+19120	2	Ten-year follow-up	Test scores	Higher			Increased for primary-school-age children.	Evaluators’ abstract, 3ie record 19120
+19120	3	Ten-year follow-up	Age at marriage and childbearing	Higher			Women old enough to have completed secondary school delayed both.	Evaluators’ abstract, 3ie record 19120
+6163	1	After boundary demarcation	Long-term investment on treated parcels	Higher			The authors observed a shift toward long-term investment.	Evaluators’ abstract, 3ie record 6163
+6163	2	After boundary demarcation	Agricultural productivity	No detectable change			The authors reported no gain in productivity at this early follow-up.	Evaluators’ abstract, 3ie record 6163
